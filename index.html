@@ -17,39 +17,25 @@
     background-color: #f0f2f5;
   }
   
-  /* Camada da imagem de fundo com transparência */
   body::before {
     content: "";
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    /* Substitua o nome 'fundo.png' pelo nome do arquivo que você salvou a imagem técnica */
     background-image: url('fundo.png'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    opacity: 0.08; /* Transparência quase total */
+    opacity: 0.08;
     z-index: -1;
     pointer-events: none;
   }
 
-  /* ===== CABEÇALHO (LOGO) ===== */
-  .header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-    gap: 15px;
-  }
-  .header img {
-    height: 50px; /* Ajuste a altura do logo conforme necessário */
-    object-fit: contain;
-  }
-  .header h1 { 
-    font-size: 22px; 
-    color: #1a3d6d; 
-    margin: 0;
-  }
+  /* ===== CABEÇALHO ===== */
+  .header { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
+  .header img { height: 50px; object-fit: contain; }
+  .header h1 { font-size: 22px; color: #1a3d6d; margin: 0; }
 
-  /* ===== BOTÕES E BARRA DE FERRAMENTAS ===== */
+  /* ===== BOTÕES ===== */
   .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
   button { 
     padding: 8px 14px; border: none; border-radius: 4px; 
@@ -60,18 +46,11 @@
   button.secondary { background: #5f6368; } button.secondary:hover { background: #3c4043; }
   button.success { background: #188038; } button.success:hover { background: #0d652d; }
 
-  /* ===== TABELA GANTT ===== */
-  .container { 
-    background: #fff; border-radius: 6px; 
-    box-shadow: 0 1px 4px rgba(0,0,0,.15); 
-    overflow: auto; position: relative; 
-  }
+  /* ===== TABELA ===== */
+  .container { background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.15); overflow: auto; position: relative; }
   table.gantt { border-collapse: collapse; font-size: 12px; min-width: 100%; }
   table.gantt th, table.gantt td { border: 1px solid #e0e0e0; padding: 4px 6px; white-space: nowrap; }
-  table.gantt thead th { 
-    background: #1a73e8; color: #fff; font-weight: 600; 
-    position: sticky; top: 0; z-index: 5; text-align: center; font-size: 11px; 
-  }
+  table.gantt thead th { background: #1a73e8; color: #fff; font-weight: 600; position: sticky; top: 0; z-index: 5; text-align: center; font-size: 11px; }
   table.gantt .col-task { min-width: 300px; text-align: left; }
   table.gantt .col-info { min-width: 90px; text-align: center; }
   table.gantt tbody tr:hover { background: #f5f9ff; }
@@ -86,74 +65,97 @@
   .actions button:hover { background: #d2e3fc; }
   .actions button.del { background: #fce8e6; color: #d93025; font-weight: 600; }
   .actions button.del:hover { background: #f6c7c2; }
+  .actions button.pause { background: #fef7e0; color: #b06000; font-weight: 600; }
+  .actions button.pause:hover { background: #feefc3; }
 
   /* ===== BARRAS DO GANTT ===== */
   .gantt-cell { position: relative; min-width: 24px; padding: 0 !important; }
   .bar { 
     position: absolute; top: 4px; bottom: 4px; border-radius: 3px; 
-    background: #1a73e8; cursor: pointer; overflow: hidden; 
-    display: flex; align-items: center; justify-content: center; 
-    color: #fff; font-size: 10px; font-weight: 600; 
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; 
+    cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; 
+    font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; 
+    background: #e8f0fe; /* Fundo claro para o tempo restante */
+    border: 1px solid #1a73e8;
   }
-  .bar:hover { filter: brightness(1.1); }
-  .bar.subtask { background: #34a853; top: 8px; bottom: 8px; }
-  .bar.overdue { background: #d93025; }
-  .bar.done { background: #9aa0a6; }
-  .progress-bar { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.35); }
+  .bar:hover { filter: brightness(0.95); }
+  
+  /* A parte preenchida da barra */
+  .bar-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: #1a73e8; z-index: 1;
+  }
+  .bar-text {
+    position: relative; z-index: 2; color: #1a3d6d; mix-blend-mode: difference; /* Ajusta a cor do texto sobre a barra */
+  }
+
+  /* Estilos de Status da Barra */
+  .bar.subtask { border-color: #34a853; background: #e6f4ea; }
+  .bar.subtask .bar-fill { background: #34a853; }
+  
+  .bar.done { border-color: #9aa0a6; background: #f1f3f4; }
+  .bar.done .bar-fill { background: #9aa0a6; }
+  
+  .bar.overdue { border-color: #d93025; background: #fce8e6; }
+  .bar.overdue .bar-fill { background: #d93025; }
+
+  /* Estilo de Pausa (Tracejado) */
+  .bar.paused {
+    border: 2px dashed #d93025; /* Vermelho tracejado para indicar pausa */
+    background: repeating-linear-gradient(
+      45deg,
+      #fce8e6,
+      #fce8e6 5px,
+      #fff 5px,
+      #fff 10px
+    );
+  }
+  .bar.paused .bar-fill {
+    background: repeating-linear-gradient(
+      45deg,
+      #d93025,
+      #d93025 5px,
+      #fce8e6 5px,
+      #fce8e6 10px
+    );
+  }
+
   .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #ea4335; z-index: 4; pointer-events: none; }
 
   /* ===== MODAIS ===== */
-  .modal-overlay { 
-    position: fixed; inset: 0; background: rgba(0,0,0,.5); 
-    display: none; align-items: center; justify-content: center; z-index: 100; 
-  }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 100; }
   .modal-overlay.active { display: flex; }
-  .modal { 
-    background: #fff; border-radius: 8px; padding: 20px; 
-    width: 500px; max-width: 95vw; max-height: 90vh; overflow: auto; 
-    box-shadow: 0 8px 24px rgba(0,0,0,.3); 
-  }
+  .modal { background: #fff; border-radius: 8px; padding: 20px; width: 500px; max-width: 95vw; max-height: 90vh; overflow: auto; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
   .modal h2 { font-size: 16px; margin-bottom: 15px; color: #1a3d6d; }
   .modal label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; margin-top: 10px; }
-  .modal input, .modal select, .modal textarea { 
-    width: 100%; padding: 7px 9px; border: 1px solid #ccc; 
-    border-radius: 4px; font-size: 13px; font-family: inherit; 
-  }
+  .modal input, .modal select, .modal textarea { width: 100%; padding: 7px 9px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: inherit; }
   .modal textarea { resize: vertical; min-height: 60px; }
   .modal .row { display: flex; gap: 10px; } .modal .row > div { flex: 1; }
   .modal .msg { color: #d93025; font-size: 12px; margin-top: 8px; display: none; }
   .modal .msg.show { display: block; }
   .modal .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-  /* ===== BADGES E LEGENDA ===== */
+  /* ===== BADGES ===== */
   .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px; }
   .badge-pai { background: #e8f0fe; color: #1a73e8; }
   .badge-sub { background: #e6f4ea; color: #137333; }
   .badge-late { background: #fce8e6; color: #d93025; }
+  .badge-paused { background: #fef7e0; color: #b06000; }
   
   .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; margin-top: 10px; color: #555; }
   .legend span { display: flex; align-items: center; gap: 5px; }
   .legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
   
-  /* ===== BACKUP ===== */
-  .backup-panel { 
-    background: #fff; border-radius: 6px; padding: 12px 16px; 
-    margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,.1); 
-    font-size: 12px; color: #555; 
-    display: flex; gap: 10px; flex-wrap: wrap; align-items: center; 
-  }
+  .backup-panel { background: #fff; border-radius: 6px; padding: 12px 16px; margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,.1); font-size: 12px; color: #555; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .backup-panel strong { color: #1a3d6d; }
   .backup-panel input[type="file"] { font-size: 12px; }
 
-  /* ===== IMPRESSÃO ===== */
   @media print {
     body { background: #fff; padding: 0; }
-    body::before { display: none; } /* Remove o fundo na impressão */
+    body::before { display: none; }
     .toolbar, .actions, .modal-overlay, .no-print, .backup-panel { display: none !important; }
     .container { box-shadow: none; overflow: visible; border: 1px solid #ccc; }
     table.gantt thead th { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .bar, .bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     table.gantt { font-size: 9px; }
     h1 { font-size: 16px; }
     tr.selected { outline: none !important; background: transparent !important; }
@@ -162,7 +164,6 @@
 </head>
 <body>
 
-<!-- CABEÇALHO COM LOGO -->
 <div class="header">
   <img src="logo-gold.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
   <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
@@ -193,12 +194,12 @@
 </div>
 
 <div class="legend no-print">
-  <span><i style="background:#1a73e8"></i> Tarefa</span>
+  <span><i style="background:#1a73e8"></i> Em Andamento</span>
   <span><i style="background:#34a853"></i> Subtarefa</span>
   <span><i style="background:#d93025"></i> Atrasada</span>
   <span><i style="background:#9aa0a6"></i> Concluída</span>
+  <span><i style="background:#fef7e0;border:2px dashed #d93025"></i> Pausada</span>
   <span><i style="background:#ea4335;width:3px"></i> Hoje</span>
-  <span>💡 Clique na linha + <b>Delete</b> para apagar</span>
 </div>
 
 <!-- MODAL TAREFA -->
@@ -215,16 +216,14 @@
       <div><label>Data de Início *</label><input type="date" id="taskStart"></div>
       <div><label>Data de Entrega *</label><input type="date" id="taskEnd"></div>
     </div>
-    <div class="row">
-      <div><label>Progresso (%)</label><input type="number" id="taskProgress" min="0" max="100" value="0"></div>
-      <div><label>Status</label>
-        <select id="taskStatus">
-          <option value="pendente">Pendente</option>
-          <option value="andamento">Em Andamento</option>
-          <option value="concluida">Concluída</option>
-        </select>
-      </div>
-    </div>
+    <label>Status Manual</label>
+    <select id="taskStatus">
+      <option value="pendente">Pendente (Não iniciada)</option>
+      <option value="andamento">Em Andamento (Automático)</option>
+      <option value="concluida">Concluída</option>
+    </select>
+    <p style="font-size:11px; color:#666; margin-top:4px;">O progresso da barra é calculado automaticamente com base nas datas. O status "Concluída" pinta a barra de cinza.</p>
+    
     <label>Observações</label>
     <textarea id="taskNotes" placeholder="Detalhes do serviço..."></textarea>
     <div class="msg" id="taskMsg"></div>
@@ -255,7 +254,7 @@
 
 <script>
 /* ========== DADOS E PERSISTÊNCIA ========== */
-const STORAGE_KEY = 'oficina_gantt_v2';
+const STORAGE_KEY = 'oficina_gantt_v3';
 let data = [];
 let expanded = {};
 let dayWidth = 26;
@@ -267,15 +266,9 @@ function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2,7)
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) { 
-      data = JSON.parse(raw); 
-    } else { 
-      data = []; // Começa vazio se não houver dados salvos
-      save(); 
-    }
-  } catch(e) { 
-    data = []; 
-  }
+    if (raw) { data = JSON.parse(raw); } 
+    else { data = []; save(); }
+  } catch(e) { data = []; }
   updateBackupInfo();
 }
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); updateBackupInfo(); }
@@ -286,7 +279,7 @@ function updateBackupInfo() {
 
 /* ========== BACKUP / RESTAURAÇÃO ========== */
 function exportBackup() {
-  const payload = { app: 'oficina-gantt', version: 2, exportedAt: new Date().toISOString(), tarefas: data };
+  const payload = { app: 'oficina-gantt', version: 3, exportedAt: new Date().toISOString(), tarefas: data };
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -309,7 +302,7 @@ function importBackup(evt) {
       else if (parsed && Array.isArray(parsed.tarefas)) tarefas = parsed.tarefas;
       else throw new Error('Formato inválido');
       tarefas.forEach(t => {
-        if (!t.id || !t.name || !t.start || !t.end) throw new Error('Item sem campos obrigatórios (id, name, start, end).');
+        if (!t.id || !t.name || !t.start || !t.end) throw new Error('Item sem campos obrigatórios.');
       });
       if (!confirm(`Importar ${tarefas.length} item(ns)?\n\nOs dados atuais serão SUBSTITUÍDOS.`)) { evt.target.value = ''; return; }
       data = tarefas; expanded = {};
@@ -334,6 +327,45 @@ function formatBR(iso) { if (!iso) return '—'; const [y,m,d] = iso.split('-');
 function getChildren(id) { return data.filter(t => t.parentId === id); }
 function getRoots() { return data.filter(t => !t.parentId); }
 function getSubtree(id) { const out = [data.find(t => t.id === id)]; getChildren(id).forEach(c => out.push(...getSubtree(c.id))); return out; }
+
+/* ========== CONTROLE DE PAUSA ========== */
+function togglePause(id) {
+  const t = data.find(x => x.id === id);
+  if (!t) return;
+  
+  if (t.status === 'concluida') {
+    alert('Tarefas concluídas não podem ser pausadas.');
+    return;
+  }
+
+  if (t.status === 'pausada') {
+    // Retomar: Volta para em andamento
+    t.status = 'andamento';
+  } else {
+    // Pausar
+    t.status = 'pausada';
+  }
+  save(); render();
+}
+
+/* ========== CÁLCULO DE PROGRESSO AUTOMÁTICO ========== */
+function calcularProgresso(tarefa) {
+  if (tarefa.status === 'concluida') return 100;
+  if (tarefa.status === 'pendente') return 0;
+  
+  const hoje = new Date(new Date().toDateString());
+  const inicio = parseDate(tarefa.start);
+  const fim = parseDate(tarefa.end);
+  
+  if (hoje < inicio) return 0;
+  if (hoje >= fim) return 100; // Já passou do prazo ou chegou no último dia
+  
+  const totalDias = daysBetween(inicio, fim) + 1;
+  const diasPassados = daysBetween(inicio, hoje) + 1;
+  
+  let pct = Math.round((diasPassados / totalDias) * 100);
+  return Math.min(100, Math.max(0, pct));
+}
 
 /* ========== RENDER ========== */
 function render() { renderHead(); renderBody(); }
@@ -360,7 +392,7 @@ function renderHead() {
   monthRow.push(`<th class="col-info" rowspan="2">Início</th>`);
   monthRow.push(`<th class="col-info" rowspan="2">Entrega</th>`);
   monthRow.push(`<th class="col-info" rowspan="2">Dur.</th>`);
-  monthRow.push(`<th class="col-info" rowspan="2">%</th>`);
+  monthRow.push(`<th class="col-info" rowspan="2">Prog.</th>`);
   monthRow.push(`<th class="col-info no-print" rowspan="2">Ações</th>`);
   let mStart = 0; const monthGroups = [];
   for (let i = 0; i < totalDays; i++) {
@@ -392,6 +424,7 @@ function renderBody() {
   const body = document.getElementById('ganttBody');
   const rows = [];
   const { min, totalDays } = window.__range;
+  
   function renderRow(t, level) {
     const children = getChildren(t.id);
     const hasChildren = children.length > 0;
@@ -400,9 +433,17 @@ function renderBody() {
     const offset = daysBetween(min, start);
     const span = daysBetween(start, end) + 1;
     const dur = span;
-    const concluida = t.status === 'concluida' || t.progress >= 100;
+    
+    const progresso = calcularProgresso(t);
+    const concluida = t.status === 'concluida' || progresso >= 100;
     const atrasada = !concluida && parseDate(t.end) < new Date(new Date().toDateString());
-    const barClass = 'bar ' + (level > 0 ? 'subtask ' : '') + (concluida ? 'done ' : '') + (atrasada ? 'overdue ' : '');
+    const pausada = t.status === 'pausada';
+    
+    let barClass = 'bar ' + (level > 0 ? 'subtask ' : '');
+    if (concluida) barClass += 'done ';
+    else if (atrasada) barClass += 'overdue ';
+    else if (pausada) barClass += 'paused ';
+
     const tr = document.createElement('tr');
     tr.dataset.id = t.id;
     if (selectedTaskId === t.id) tr.classList.add('selected');
@@ -412,41 +453,52 @@ function renderBody() {
       : `<span style="width:14px;display:inline-block;"></span>`;
     const badge = level === 0 ? `<span class="badge badge-pai">TAREFA</span>` : `<span class="badge badge-sub">SUB</span>`;
     const lateBadge = atrasada ? `<span class="badge badge-late">ATRASADA</span>` : '';
+    const pausedBadge = pausada ? `<span class="badge badge-paused">PAUSADA</span>` : '';
+
     tr.innerHTML = `
       <td class="col-task">
         <div class="task-name" style="padding-left:${indentPx}px;">
           ${arrow}
           <span class="${level === 0 ? 'tarefa-pai' : 'subtask-name'}">${escapeHtml(t.name)}</span>
-          ${badge}${lateBadge}
+          ${badge}${lateBadge}${pausedBadge}
           ${t.owner ? `<span style="color:#888;font-size:11px;margin-left:6px;">👤 ${escapeHtml(t.owner)}</span>` : ''}
         </div>
       </td>
       <td class="col-info">${formatBR(t.start)}</td>
       <td class="col-info">${formatBR(t.end)}</td>
       <td class="col-info">${dur}d</td>
-      <td class="col-info">${t.progress||0}%</td>
+      <td class="col-info">${progresso}%</td>
       <td class="col-info no-print">
         <div class="actions">
+          ${!concluida ? `<button title="${pausada ? 'Retomar Tarefa' : 'Pausar Tarefa'}" class="pause" onclick="event.stopPropagation();togglePause('${t.id}')">${pausada ? '▶️' : '⏸️'}</button>` : ''}
           <button title="Editar" onclick="event.stopPropagation();editTask('${t.id}')">✎</button>
           <button title="Adicionar subtarefa" onclick="event.stopPropagation();addSubtask('${t.id}')">➕</button>
           <button title="Excluir" class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️</button>
         </div>
       </td>`;
     rows.push(tr);
+
     const ganttTd = document.createElement('td');
     ganttTd.colSpan = totalDays;
     ganttTd.className = 'gantt-cell';
     ganttTd.style.position = 'relative';
-    ganttTd.style.height = '24px';
+    ganttTd.style.height = '28px'; // Um pouco mais alto para acomodar o tracejado
     ganttTd.style.minWidth = (totalDays * dayWidth) + 'px';
+
     const bar = document.createElement('div');
     bar.className = barClass;
     bar.style.left = (offset * dayWidth) + 'px';
     bar.style.width = (span * dayWidth) + 'px';
-    bar.title = `${t.name}\n${formatBR(t.start)} → ${formatBR(t.end)} (${dur}d)\n${t.progress||0}%`;
-    bar.innerHTML = `<div class="progress-bar" style="width:${concluida?100:(t.progress||0)}%"></div><span style="position:relative;z-index:2;">${span >= 3 ? (concluida?'✔ ':'') + (t.progress||0)+'%' : ''}</span>`;
+    bar.title = `${t.name}\n${formatBR(t.start)} → ${formatBR(t.end)} (${dur}d)\nProgresso: ${progresso}%`;
+    
+    // Desenha o preenchimento interno da barra
+    bar.innerHTML = `
+      <div class="bar-fill" style="width:${progresso}%"></div>
+      <span class="bar-text">${span >= 3 && progresso > 0 ? progresso + '%' : ''}</span>
+    `;
     bar.onclick = () => editTask(t.id);
     ganttTd.appendChild(bar);
+
     const hoje = new Date(new Date().toDateString());
     if (hoje >= min && hoje <= addDays(min, totalDays-1)) {
       const todayOffset = daysBetween(min, hoje);
@@ -455,6 +507,7 @@ function renderBody() {
       line.style.left = (todayOffset * dayWidth + dayWidth/2) + 'px';
       ganttTd.appendChild(line);
     }
+
     const trGantt = document.createElement('tr');
     trGantt.className = 'gantt-row-' + t.id;
     trGantt.dataset.id = t.id;
@@ -466,6 +519,7 @@ function renderBody() {
     trGantt.appendChild(tdInfo);
     trGantt.appendChild(ganttTd);
     rows.push(trGantt);
+    
     if (hasChildren && isExpanded) children.forEach(c => renderRow(c, level + 1));
   }
   getRoots().forEach(r => renderRow(r, 0));
@@ -489,7 +543,6 @@ function openTaskModal(task, parentId) {
   document.getElementById('taskOwner').value = task ? (task.owner||'') : '';
   document.getElementById('taskStart').value = task ? task.start : todayStr();
   document.getElementById('taskEnd').value = task ? task.end : fmtDate(addDays(new Date(), 3));
-  document.getElementById('taskProgress').value = task ? (task.progress||0) : 0;
   document.getElementById('taskStatus').value = task ? (task.status||'pendente') : 'pendente';
   document.getElementById('taskNotes').value = task ? (task.notes||'') : '';
   document.getElementById('taskMsg').classList.remove('show');
@@ -506,24 +559,25 @@ function saveTask() {
   const owner = document.getElementById('taskOwner').value.trim();
   const start = document.getElementById('taskStart').value;
   const end = document.getElementById('taskEnd').value;
-  const progress = Math.max(0, Math.min(100, parseInt(document.getElementById('taskProgress').value)||0));
   const status = document.getElementById('taskStatus').value;
   const notes = document.getElementById('taskNotes').value.trim();
   const msg = document.getElementById('taskMsg');
+
   if (!name) { msg.textContent = 'Informe o nome da tarefa.'; msg.classList.add('show'); return; }
   if (!start || !end) { msg.textContent = 'Informe as datas de início e entrega.'; msg.classList.add('show'); return; }
   if (parseDate(end) < parseDate(start)) { msg.textContent = 'A data de entrega não pode ser anterior ao início.'; msg.classList.add('show'); return; }
+  
   if (id) {
     const original = data.find(x => x.id === id);
     const dateChanged = original && (original.start !== start || original.end !== end);
     if (dateChanged) {
-      pendingEdit = { id, parentId, name, owner, start, end, progress, status, notes };
+      pendingEdit = { id, parentId, name, owner, start, end, status, notes };
       closeTaskModal();
       openJustify();
       return;
     }
   }
-  applyTask({ id, parentId, name, owner, start, end, progress, status, notes });
+  applyTask({ id, parentId, name, owner, start, end, status, notes });
 }
 
 function applyTask(p) {
@@ -531,7 +585,7 @@ function applyTask(p) {
     const t = data.find(x => x.id === p.id);
     if (t) Object.assign(t, p);
   } else {
-    data.push({ id: uid(), parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, progress: p.progress, status: p.status, notes: p.notes });
+    data.push({ id: uid(), parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, status: p.status, notes: p.notes });
     if (p.parentId) expanded[p.parentId] = true;
   }
   save(); closeTaskModal(); render();
