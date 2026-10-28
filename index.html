@@ -22,12 +22,12 @@
     content: "";
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    /* Substitua o nome 'fundo.jpg' pelo nome do arquivo que você salvou a imagem técnica */
-    background-image: url('fundo.jpg'); 
+    /* Substitua o nome 'fundo.png' pelo nome do arquivo que você salvou a imagem técnica */
+    background-image: url('fundo.png'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    opacity: 0.30; /* Transparência quase total */
+    opacity: 0.08; /* Transparência quase total */
     z-index: -1;
     pointer-events: none;
   }
@@ -58,7 +58,6 @@
   }
   button:hover { background: #1558b0; }
   button.secondary { background: #5f6368; } button.secondary:hover { background: #3c4043; }
-  button.danger { background: #d93025; } button.danger:hover { background: #a50e0e; }
   button.success { background: #188038; } button.success:hover { background: #0d652d; }
 
   /* ===== TABELA GANTT ===== */
@@ -165,8 +164,7 @@
 
 <!-- CABEÇALHO COM LOGO -->
 <div class="header">
-  <!-- Se o nome do seu arquivo de logo for diferente, altere o src abaixo -->
-  <img src="logo.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
+  <img src="logo-gold.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
   <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
 </div>
 
@@ -175,7 +173,6 @@
   <button class="secondary" onclick="window.print()">🖨️ Imprimir</button>
   <button class="secondary" onclick="expandAll(true)">Expandir Tudo</button>
   <button class="secondary" onclick="expandAll(false)">Recolher Tudo</button>
-  <button class="danger" onclick="resetData()">Restaurar Exemplo</button>
 </div>
 
 <div class="backup-panel no-print">
@@ -267,38 +264,24 @@ let selectedTaskId = null;
 
 function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2,7); }
 
-function seedData() {
-  const hoje = new Date();
-  const fmt = d => d.toISOString().slice(0,10);
-  const add = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
-  const t1 = uid();
-  const s1 = uid(), s2 = uid();
-  data = [
-    { id: t1, parentId: null, name: 'Revisão Motor — Caminhão ABC-1234', owner: 'Carlos', start: fmt(add(hoje,-2)), end: fmt(add(hoje,4)), progress: 40, status: 'andamento', notes: 'Cliente aguarda entrega até sexta.' },
-    { id: s1, parentId: t1, name: 'Desmontagem e diagnóstico', owner: 'Carlos', start: fmt(add(hoje,-2)), end: fmt(add(hoje,0)), progress: 100, status: 'concluida', notes: '' },
-    { id: s2, parentId: t1, name: 'Troca de peças e montagem', owner: 'João', start: fmt(add(hoje,1)), end: fmt(add(hoje,4)), progress: 10, status: 'andamento', notes: '' },
-    { id: uid(), parentId: null, name: 'Troca de Óleo — Carro XYZ-5678', owner: 'Maria', start: fmt(add(hoje,-1)), end: fmt(add(hoje,1)), progress: 50, status: 'andamento', notes: '' },
-    { id: uid(), parentId: null, name: 'Alinhamento e Balanceamento — Van DEF-9012', owner: 'Pedro', start: fmt(add(hoje,2)), end: fmt(add(hoje,5)), progress: 0, status: 'pendente', notes: '' },
-  ];
-  expanded[t1] = true;
-}
-
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) { data = JSON.parse(raw); }
-    else { seedData(); save(); }
-  } catch(e) { seedData(); }
+    if (raw) { 
+      data = JSON.parse(raw); 
+    } else { 
+      data = []; // Começa vazio se não houver dados salvos
+      save(); 
+    }
+  } catch(e) { 
+    data = []; 
+  }
   updateBackupInfo();
 }
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); updateBackupInfo(); }
 function updateBackupInfo() {
   const el = document.getElementById('backupInfo');
   if (el) el.textContent = `${data.length} item(ns) salvos neste navegador`;
-}
-function resetData() {
-  if (!confirm('Restaurar dados de exemplo? Os dados atuais serão perdidos.\n\nDica: exporte um backup antes.')) return;
-  seedData(); save(); render();
 }
 
 /* ========== BACKUP / RESTAURAÇÃO ========== */
