@@ -407,4 +407,162 @@ function renderBody() {
       line.style.left = (todayOffset * dayWidth + dayWidth/2) + 'px';
       ganttTd.appendChild(line);
     }
-    const tr
+    const trGantt = document.createElement('tr');
+    trGantt.className = 'gantt-row-' + t.id;
+    trGantt.dataset.id = t.id;
+    if (selectedTaskId === t.id) trGantt.classList.add('selected');
+    const tdInfo = document.createElement('td');
+    tdInfo.colSpan = 6;
+    tdInfo.style.background = '#fafbfc';
+    tdInfo.style.borderRight = '1px solid #e0e0e0';
+    trGantt.appendChild(tdInfo);
+    trGantt.appendChild(ganttTd);
+    rows.push(trGantt);
+    if (hasChildren && isExpanded) children.forEach(c => renderRow(c, level + 1));
+  }
+  getRoots().forEach(r => renderRow(r, 0));
+  body.innerHTML = '';
+  rows.forEach(r => body.appendChild(r));
+}
+
+function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ========== EXPANDIR ========== */
+function toggleExpand(id) { expanded[id] = expanded[id] === false ? true : false; render(); }
+function expandAll(v) { data.forEach(t => expanded[t.id] = v); render(); }
+
+/* ========== MODAL TAREFA ========== */
+function openTaskModal(task, parentId) {
+  const modal = document.getElementById('taskModal');
+  document.getElementById('taskModalTitle').textContent = task ? 'Editar Tarefa' : (parentId ? 'Nova Subtarefa' : 'Nova Tarefa');
+  document.getElementById('taskId').value = task ? task.id : '';
+  document.getElementById('taskParentId').value = parentId || '';
+  document.getElementById('taskName').value = task ? task.name : '';
+  document.getElementById('taskOwner').value = task ? (task.owner||'') : '';
+  document.getElementById('taskPhone').value = task ? (task.phone||'') : '';
+  document.getElementById('taskStart').value = task ? task.start : todayStr();
+  document.getElementById('taskEnd').value = task ? task.end : fmtDate(addDays(new Date(), 3));
+  document.getElementById('taskProgress').value = task ? (task.progress||0) : 0;
+  document.getElementById('taskStatus').value = task ? (task.status||'pendente') : 'pendente';
+  document.getElementById('taskNotes').value = task ? (task.notes||'') : '';
+  document.getElementById('taskMsg').classList.remove('show');
+  modal.classList.add('active');
+}
+function closeTaskModal() { document.getElementById('taskModal').classList.remove('active'); }
+function addSubtask(parentId) { openTaskModal(null, parentId); }
+function editTask(id) { const t = data.find(x => x.id === id); if (t) openTaskModal(t, t.parentId); }
+
+function saveTask() {
+  const id = document.getElementById('taskId').value;
+  const parentId = document.getElementById('taskParentId').value || null;
+  const name = document.getElementById('taskName').value.trim();
+  const owner = document.getElementById('taskOwner').value.trim();
+  const phone = document.getElementById('taskPhone').value.trim();
+  const start = document.getElementById('taskStart').value;
+  const end = document.getElementById('taskEnd').value;
+  const progress = Math.max(0, Math.min(100, parseInt(document.getElementById('taskProgress').value)||0));
+  const status = document.getElementById('taskStatus').value;
+  const notes = document.getElementById('taskNotes').value.trim();
+  const msg = document.getElementById('taskMsg');
+  if (!name) { msg.textContent = 'Informe o nome da tarefa.'; msg.classList.add('show'); return; }
+  if (!start || !end) { msg.textContent = 'Informe as datas de início e entrega.'; msg.classList.add('show'); return; }
+  if (parseDate(end) < parseDate(start)) { msg.textContent = 'A data de entrega não pode ser anterior ao início.'; msg.classList.add('show'); return; }
+  if (id) {
+    const original = data.find(x => x.id === id);
+    const dateChanged = original && (original.start !== start || original.end !== end);
+    if (dateChanged) {
+      pendingEdit = { id, parentId, name, owner, phone, start, end, progress, status, notes };
+      closeTaskModal();
+      openJustify();
+      return;
+    }
+  }
+  applyTask({ id, parentId, name, owner, phone, start, end, progress, status, notes });
+}
+
+function applyTask(p) {
+  if (p.id) {
+    const t = data.find(x => x.id === p.id);
+    if (t) Object.assign(t, p);
+  } else {
+    data.push({ id: uid(), parentId: p.parentId, name: p.name, owner: p.owner, phone: p.phone, start: p.start, end: p.end, progress: p.progress, status: p.status, notes: p.notes });
+    if (p.parentId) expanded[p.parentId] = true;
+  }
+  save(); closeTaskModal(); render();
+}
+
+/* ========== JUSTIFICATIVA ========== */
+function openJustify() {
+  document.getElementById('justifyText').value = '';
+  document.getElementById('justifyMsg').classList.remove('show');
+  document.getElementById('justifyModal').classList.add('active');
+}
+function cancelJustify() {
+  pendingEdit = null;
+  document.getElementById('justifyModal').classList.remove('active');
+}
+function confirmJustify() {
+  const txt = document.getElementById('justifyText').value.trim();
+  const msg = document.getElementById('justifyMsg');
+  if (txt.length < 5) { msg.textContent = 'Informe uma justificativa com pelo menos 5 caracteres.'; msg.classList.add('show'); return; }
+  const p = pendingEdit;
+  if (!p) { cancelJustify(); return; }
+  const original = data.find(x => x.id === p.id);
+  const log = (original.justificativas || []);
+  log.push({ data: new Date().toISOString(), de: { inicio: original.start, entrega: original.end }, para: { inicio: p.start, entrega: p.end }, motivo: txt });
+  p.justificativas = log;
+  document.getElementById('justifyModal').classList.remove('active');
+  pendingEdit = null;
+  applyTask(p);
+}
+
+/* ========== EXCLUIR ========== */
+function deleteTask(id) {
+  const t = data.find(x => x.id === id); if (!t) return;
+  const children = getChildren(id);
+  const hasChildren = children.length > 0;
+  if (!hasChildren) {
+    if (!confirm(`Excluir a tarefa "${t.name}"?\n\nEsta ação não pode ser desfeita.`)) return;
+    removeTaskAndSubtree(id); return;
+  }
+  const msg = `A tarefa "${t.name}" possui ${children.length} subtarefa(s).\n\nOK = EXCLUIR TUDO (tarefa + subtarefas).\nCancelar = escolher outra opção.`;
+  if (confirm(msg)) { removeTaskAndSubtree(id); return; }
+  const mover = confirm(`Deseja MANTER as subtarefas de "${t.name}"?\n\nOK = manter subtarefas (promovidas a tarefas principais)\nCancelar = não excluir nada`);
+  if (mover) {
+    children.forEach(c => { c.parentId = null; });
+    data = data.filter(x => x.id !== id);
+    save(); render();
+  }
+}
+function removeTaskAndSubtree(id) {
+  const ids = getSubtree(id).map(x => x.id);
+  data = data.filter(x => !ids.includes(x.id));
+  save(); render();
+}
+
+/* ========== SELEÇÃO + DELETE ========== */
+document.addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr) {
+    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+    tr.classList.add('selected');
+    selectedTaskId = tr.dataset.id;
+  } else if (!e.target.closest('.modal-overlay') && !e.target.closest('button')) {
+    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+    selectedTaskId = null;
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Delete' && selectedTaskId) { deleteTask(selectedTaskId); selectedTaskId = null; }
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    pendingEdit = null;
+  }
+});
+
+/* ========== INIT ========== */
+load();
+render();
+</script>
+</body>
+</html>
