@@ -3,68 +3,156 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gantt - Controle de Serviços da Oficina</title>
+<title>Gantt - Controle de Serviços - Gold</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; color: #222; padding: 20px; }
-  h1 { font-size: 22px; margin-bottom: 15px; color: #1a3d6d; }
+  
+  /* ===== PLANO DE FUNDO ===== */
+  body { 
+    font-family: 'Segoe UI', Tahoma, sans-serif; 
+    color: #222; 
+    padding: 20px; 
+    position: relative;
+    min-height: 100vh;
+    background-color: #f0f2f5;
+  }
+  
+  /* Camada da imagem de fundo com transparência */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    /* Substitua o nome 'fundo.jpg' pelo nome do arquivo que você salvou a imagem técnica */
+    background-image: url('fundo.jpg'); 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.20; /* Transparência quase total */
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* ===== CABEÇALHO (LOGO) ===== */
+  .header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 15px;
+  }
+  .header img {
+    height: 50px; /* Ajuste a altura do logo conforme necessário */
+    object-fit: contain;
+  }
+  .header h1 { 
+    font-size: 22px; 
+    color: #1a3d6d; 
+    margin: 0;
+  }
+
+  /* ===== BOTÕES E BARRA DE FERRAMENTAS ===== */
   .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
-  button { padding: 8px 14px; border: none; border-radius: 4px; background: #1a73e8; color: #fff; cursor: pointer; font-size: 13px; transition: .2s; }
+  button { 
+    padding: 8px 14px; border: none; border-radius: 4px; 
+    background: #1a73e8; color: #fff; cursor: pointer; 
+    font-size: 13px; transition: .2s; 
+  }
   button:hover { background: #1558b0; }
   button.secondary { background: #5f6368; } button.secondary:hover { background: #3c4043; }
   button.danger { background: #d93025; } button.danger:hover { background: #a50e0e; }
   button.success { background: #188038; } button.success:hover { background: #0d652d; }
-  .container { background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.15); overflow: auto; position: relative; }
+
+  /* ===== TABELA GANTT ===== */
+  .container { 
+    background: #fff; border-radius: 6px; 
+    box-shadow: 0 1px 4px rgba(0,0,0,.15); 
+    overflow: auto; position: relative; 
+  }
   table.gantt { border-collapse: collapse; font-size: 12px; min-width: 100%; }
   table.gantt th, table.gantt td { border: 1px solid #e0e0e0; padding: 4px 6px; white-space: nowrap; }
-  table.gantt thead th { background: #1a73e8; color: #fff; font-weight: 600; position: sticky; top: 0; z-index: 5; text-align: center; font-size: 11px; }
+  table.gantt thead th { 
+    background: #1a73e8; color: #fff; font-weight: 600; 
+    position: sticky; top: 0; z-index: 5; text-align: center; font-size: 11px; 
+  }
   table.gantt .col-task { min-width: 300px; text-align: left; }
   table.gantt .col-info { min-width: 90px; text-align: center; }
   table.gantt tbody tr:hover { background: #f5f9ff; }
   table.gantt tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
+  
   .task-name { display: flex; align-items: center; gap: 6px; }
   .tarefa-pai { font-weight: 600; color: #1a3d6d; }
   .subtask-name { color: #444; }
+  
   .actions { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
   .actions button { padding: 3px 7px; font-size: 11px; background: #e8f0fe; color: #1a73e8; }
   .actions button:hover { background: #d2e3fc; }
   .actions button.del { background: #fce8e6; color: #d93025; font-weight: 600; }
   .actions button.del:hover { background: #f6c7c2; }
-  .actions button.wa { background: #e6f4ea; color: #188038; font-weight: 600; }
-  .actions button.wa:hover { background: #ceead6; }
+
+  /* ===== BARRAS DO GANTT ===== */
   .gantt-cell { position: relative; min-width: 24px; padding: 0 !important; }
-  .bar { position: absolute; top: 4px; bottom: 4px; border-radius: 3px; background: #1a73e8; cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; }
+  .bar { 
+    position: absolute; top: 4px; bottom: 4px; border-radius: 3px; 
+    background: #1a73e8; cursor: pointer; overflow: hidden; 
+    display: flex; align-items: center; justify-content: center; 
+    color: #fff; font-size: 10px; font-weight: 600; 
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; 
+  }
   .bar:hover { filter: brightness(1.1); }
   .bar.subtask { background: #34a853; top: 8px; bottom: 8px; }
   .bar.overdue { background: #d93025; }
   .bar.done { background: #9aa0a6; }
   .progress-bar { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.35); }
   .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #ea4335; z-index: 4; pointer-events: none; }
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 100; }
+
+  /* ===== MODAIS ===== */
+  .modal-overlay { 
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); 
+    display: none; align-items: center; justify-content: center; z-index: 100; 
+  }
   .modal-overlay.active { display: flex; }
-  .modal { background: #fff; border-radius: 8px; padding: 20px; width: 500px; max-width: 95vw; max-height: 90vh; overflow: auto; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+  .modal { 
+    background: #fff; border-radius: 8px; padding: 20px; 
+    width: 500px; max-width: 95vw; max-height: 90vh; overflow: auto; 
+    box-shadow: 0 8px 24px rgba(0,0,0,.3); 
+  }
   .modal h2 { font-size: 16px; margin-bottom: 15px; color: #1a3d6d; }
   .modal label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; margin-top: 10px; }
-  .modal input, .modal select, .modal textarea { width: 100%; padding: 7px 9px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: inherit; }
+  .modal input, .modal select, .modal textarea { 
+    width: 100%; padding: 7px 9px; border: 1px solid #ccc; 
+    border-radius: 4px; font-size: 13px; font-family: inherit; 
+  }
   .modal textarea { resize: vertical; min-height: 60px; }
   .modal .row { display: flex; gap: 10px; } .modal .row > div { flex: 1; }
   .modal .msg { color: #d93025; font-size: 12px; margin-top: 8px; display: none; }
   .modal .msg.show { display: block; }
   .modal .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+  /* ===== BADGES E LEGENDA ===== */
   .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px; }
   .badge-pai { background: #e8f0fe; color: #1a73e8; }
   .badge-sub { background: #e6f4ea; color: #137333; }
   .badge-late { background: #fce8e6; color: #d93025; }
+  
   .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; margin-top: 10px; color: #555; }
   .legend span { display: flex; align-items: center; gap: 5px; }
   .legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
-  .backup-panel { background: #fff; border-radius: 6px; padding: 12px 16px; margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,.1); font-size: 12px; color: #555; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  
+  /* ===== BACKUP ===== */
+  .backup-panel { 
+    background: #fff; border-radius: 6px; padding: 12px 16px; 
+    margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,.1); 
+    font-size: 12px; color: #555; 
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center; 
+  }
   .backup-panel strong { color: #1a3d6d; }
   .backup-panel input[type="file"] { font-size: 12px; }
+
+  /* ===== IMPRESSÃO ===== */
   @media print {
     body { background: #fff; padding: 0; }
+    body::before { display: none; } /* Remove o fundo na impressão */
     .toolbar, .actions, .modal-overlay, .no-print, .backup-panel { display: none !important; }
-    .container { box-shadow: none; overflow: visible; }
+    .container { box-shadow: none; overflow: visible; border: 1px solid #ccc; }
     table.gantt thead th { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     table.gantt { font-size: 9px; }
@@ -75,7 +163,12 @@
 </head>
 <body>
 
-<h1>🛠️ Gantt — Controle de Serviços Pendentes da Oficina</h1>
+<!-- CABEÇALHO COM LOGO -->
+<div class="header">
+  <!-- Se o nome do seu arquivo de logo for diferente, altere o src abaixo -->
+  <img src="logo-gold.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
+  <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
+</div>
 
 <div class="toolbar no-print">
   <button onclick="openTaskModal()">➕ Nova Tarefa</button>
@@ -121,8 +214,6 @@
     <input type="text" id="taskName" placeholder="Ex.: Troca de óleo">
     <label>Responsável</label>
     <input type="text" id="taskOwner" placeholder="Ex.: João Mecânico">
-    <label>Telefone WhatsApp (opcional)</label>
-    <input type="text" id="taskPhone" placeholder="Ex.: 5511999999999 (só números, com DDI)">
     <div class="row">
       <div><label>Data de Início *</label><input type="date" id="taskStart"></div>
       <div><label>Data de Entrega *</label><input type="date" id="taskEnd"></div>
@@ -183,11 +274,11 @@ function seedData() {
   const t1 = uid();
   const s1 = uid(), s2 = uid();
   data = [
-    { id: t1, parentId: null, name: 'Revisão Motor — Caminhão ABC-1234', owner: 'Carlos', phone: '5511999990001', start: fmt(add(hoje,-2)), end: fmt(add(hoje,4)), progress: 40, status: 'andamento', notes: 'Cliente aguarda entrega até sexta.' },
-    { id: s1, parentId: t1, name: 'Desmontagem e diagnóstico', owner: 'Carlos', phone: '', start: fmt(add(hoje,-2)), end: fmt(add(hoje,0)), progress: 100, status: 'concluida', notes: '' },
-    { id: s2, parentId: t1, name: 'Troca de peças e montagem', owner: 'João', phone: '', start: fmt(add(hoje,1)), end: fmt(add(hoje,4)), progress: 10, status: 'andamento', notes: '' },
-    { id: uid(), parentId: null, name: 'Troca de Óleo — Carro XYZ-5678', owner: 'Maria', phone: '5511999990002', start: fmt(add(hoje,-1)), end: fmt(add(hoje,1)), progress: 50, status: 'andamento', notes: '' },
-    { id: uid(), parentId: null, name: 'Alinhamento e Balanceamento — Van DEF-9012', owner: 'Pedro', phone: '5511999990003', start: fmt(add(hoje,2)), end: fmt(add(hoje,5)), progress: 0, status: 'pendente', notes: '' },
+    { id: t1, parentId: null, name: 'Revisão Motor — Caminhão ABC-1234', owner: 'Carlos', start: fmt(add(hoje,-2)), end: fmt(add(hoje,4)), progress: 40, status: 'andamento', notes: 'Cliente aguarda entrega até sexta.' },
+    { id: s1, parentId: t1, name: 'Desmontagem e diagnóstico', owner: 'Carlos', start: fmt(add(hoje,-2)), end: fmt(add(hoje,0)), progress: 100, status: 'concluida', notes: '' },
+    { id: s2, parentId: t1, name: 'Troca de peças e montagem', owner: 'João', start: fmt(add(hoje,1)), end: fmt(add(hoje,4)), progress: 10, status: 'andamento', notes: '' },
+    { id: uid(), parentId: null, name: 'Troca de Óleo — Carro XYZ-5678', owner: 'Maria', start: fmt(add(hoje,-1)), end: fmt(add(hoje,1)), progress: 50, status: 'andamento', notes: '' },
+    { id: uid(), parentId: null, name: 'Alinhamento e Balanceamento — Van DEF-9012', owner: 'Pedro', start: fmt(add(hoje,2)), end: fmt(add(hoje,5)), progress: 0, status: 'pendente', notes: '' },
   ];
   expanded[t1] = true;
 }
@@ -260,31 +351,6 @@ function formatBR(iso) { if (!iso) return '—'; const [y,m,d] = iso.split('-');
 function getChildren(id) { return data.filter(t => t.parentId === id); }
 function getRoots() { return data.filter(t => !t.parentId); }
 function getSubtree(id) { const out = [data.find(t => t.id === id)]; getChildren(id).forEach(c => out.push(...getSubtree(c.id))); return out; }
-
-/* ========== WHATSAPP (envio manual) ========== */
-function sendToWhatsApp(id) {
-  const t = data.find(x => x.id === id); if (!t) return;
-  const linhas = [
-    `🛠️ *Serviço da Oficina*`, ``,
-    `*${t.name}*`,
-    t.owner ? `👤 Responsável: ${t.owner}` : '',
-    `📅 Início: ${formatBR(t.start)}`,
-    `📅 Entrega: ${formatBR(t.end)}`,
-    `📊 Progresso: ${t.progress || 0}%`,
-    `📌 Status: ${t.status || 'pendente'}`,
-    t.notes ? `📝 Obs: ${t.notes}` : '', ``,
-    `_Gerado pelo Gantt da Oficina_`
-  ].filter(Boolean).join('\n');
-  const textoCodificado = encodeURIComponent(linhas);
-  let url;
-  if (t.phone && t.phone.replace(/\D/g,'').length >= 10) {
-    const numero = t.phone.replace(/\D/g,'');
-    url = `https://wa.me/${numero}?text=${textoCodificado}`;
-  } else {
-    url = `https://wa.me/?text=${textoCodificado}`;
-  }
-  window.open(url, '_blank');
-}
 
 /* ========== RENDER ========== */
 function render() { renderHead(); renderBody(); }
@@ -380,7 +446,6 @@ function renderBody() {
         <div class="actions">
           <button title="Editar" onclick="event.stopPropagation();editTask('${t.id}')">✎</button>
           <button title="Adicionar subtarefa" onclick="event.stopPropagation();addSubtask('${t.id}')">➕</button>
-          <button title="Enviar pelo WhatsApp" class="wa" onclick="event.stopPropagation();sendToWhatsApp('${t.id}')">💬</button>
           <button title="Excluir" class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️</button>
         </div>
       </td>`;
@@ -439,7 +504,6 @@ function openTaskModal(task, parentId) {
   document.getElementById('taskParentId').value = parentId || '';
   document.getElementById('taskName').value = task ? task.name : '';
   document.getElementById('taskOwner').value = task ? (task.owner||'') : '';
-  document.getElementById('taskPhone').value = task ? (task.phone||'') : '';
   document.getElementById('taskStart').value = task ? task.start : todayStr();
   document.getElementById('taskEnd').value = task ? task.end : fmtDate(addDays(new Date(), 3));
   document.getElementById('taskProgress').value = task ? (task.progress||0) : 0;
@@ -457,7 +521,6 @@ function saveTask() {
   const parentId = document.getElementById('taskParentId').value || null;
   const name = document.getElementById('taskName').value.trim();
   const owner = document.getElementById('taskOwner').value.trim();
-  const phone = document.getElementById('taskPhone').value.trim();
   const start = document.getElementById('taskStart').value;
   const end = document.getElementById('taskEnd').value;
   const progress = Math.max(0, Math.min(100, parseInt(document.getElementById('taskProgress').value)||0));
@@ -471,13 +534,13 @@ function saveTask() {
     const original = data.find(x => x.id === id);
     const dateChanged = original && (original.start !== start || original.end !== end);
     if (dateChanged) {
-      pendingEdit = { id, parentId, name, owner, phone, start, end, progress, status, notes };
+      pendingEdit = { id, parentId, name, owner, start, end, progress, status, notes };
       closeTaskModal();
       openJustify();
       return;
     }
   }
-  applyTask({ id, parentId, name, owner, phone, start, end, progress, status, notes });
+  applyTask({ id, parentId, name, owner, start, end, progress, status, notes });
 }
 
 function applyTask(p) {
@@ -485,7 +548,7 @@ function applyTask(p) {
     const t = data.find(x => x.id === p.id);
     if (t) Object.assign(t, p);
   } else {
-    data.push({ id: uid(), parentId: p.parentId, name: p.name, owner: p.owner, phone: p.phone, start: p.start, end: p.end, progress: p.progress, status: p.status, notes: p.notes });
+    data.push({ id: uid(), parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, progress: p.progress, status: p.status, notes: p.notes });
     if (p.parentId) expanded[p.parentId] = true;
   }
   save(); closeTaskModal(); render();
