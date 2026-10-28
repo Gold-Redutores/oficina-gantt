@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gantt - Controle de Serviços - Gold</title>
+<!-- Biblioteca do Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   
@@ -29,6 +31,19 @@
     z-index: -1;
     pointer-events: none;
   }
+
+  /* ===== TELA DE CARREGAMENTO ===== */
+  #loadingOverlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,0.9);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 9999; font-size: 18px; color: #1a73e8; font-weight: bold;
+  }
+  .spinner {
+    border: 4px solid #f3f3f3; border-top: 4px solid #1a73e8;
+    border-radius: 50%; width: 40px; height: 40px;
+    animation: spin 1s linear infinite; margin-bottom: 15px;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
   /* ===== CABEÇALHO ===== */
   .header { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
@@ -74,21 +89,13 @@
     position: absolute; top: 4px; bottom: 4px; border-radius: 3px; 
     cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; 
     font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; 
-    background: #e8f0fe; /* Fundo claro para o tempo restante */
-    border: 1px solid #1a73e8;
+    background: #e8f0fe; border: 1px solid #1a73e8;
   }
   .bar:hover { filter: brightness(0.95); }
   
-  /* A parte preenchida da barra */
-  .bar-fill {
-    position: absolute; left: 0; top: 0; bottom: 0;
-    background: #1a73e8; z-index: 1;
-  }
-  .bar-text {
-    position: relative; z-index: 2; color: #1a3d6d; mix-blend-mode: difference; /* Ajusta a cor do texto sobre a barra */
-  }
+  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #1a73e8; z-index: 1; }
+  .bar-text { position: relative; z-index: 2; color: #1a3d6d; mix-blend-mode: difference; }
 
-  /* Estilos de Status da Barra */
   .bar.subtask { border-color: #34a853; background: #e6f4ea; }
   .bar.subtask .bar-fill { background: #34a853; }
   
@@ -98,26 +105,8 @@
   .bar.overdue { border-color: #d93025; background: #fce8e6; }
   .bar.overdue .bar-fill { background: #d93025; }
 
-  /* Estilo de Pausa (Tracejado) */
-  .bar.paused {
-    border: 2px dashed #d93025; /* Vermelho tracejado para indicar pausa */
-    background: repeating-linear-gradient(
-      45deg,
-      #fce8e6,
-      #fce8e6 5px,
-      #fff 5px,
-      #fff 10px
-    );
-  }
-  .bar.paused .bar-fill {
-    background: repeating-linear-gradient(
-      45deg,
-      #d93025,
-      #d93025 5px,
-      #fce8e6 5px,
-      #fce8e6 10px
-    );
-  }
+  .bar.paused { border: 2px dashed #d93025; background: repeating-linear-gradient(45deg, #fce8e6, #fce8e6 5px, #fff 5px, #fff 10px); }
+  .bar.paused .bar-fill { background: repeating-linear-gradient(45deg, #d93025, #d93025 5px, #fce8e6 5px, #fce8e6 10px); }
 
   .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #ea4335; z-index: 4; pointer-events: none; }
 
@@ -164,6 +153,12 @@
 </head>
 <body>
 
+<!-- Tela de carregamento (some quando os dados chegam) -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  Carregando dados do servidor...
+</div>
+
 <div class="header">
   <img src="logo-gold.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
   <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
@@ -177,13 +172,9 @@
 </div>
 
 <div class="backup-panel no-print">
-  <strong>💾 Backup dos dados:</strong>
-  <button class="success" onclick="exportBackup()">📤 Exportar Backup (.json)</button>
-  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;background:#e8f0fe;border-radius:4px;color:#1a73e8;font-weight:600;">
-    📥 Abrir Backup
-    <input type="file" accept=".json" onchange="importBackup(event)" style="display:none;">
-  </label>
-  <span id="backupInfo" style="color:#888;margin-left:auto;"></span>
+  <strong>☁️ Sincronização na Nuvem (Supabase) ativada</strong>
+  <button class="success" onclick="exportBackup()">📤 Baixar Cópia (Backup)</button>
+  <span id="backupInfo" style="color:#888;margin-left:auto;">Conectando...</span>
 </div>
 
 <div class="container">
@@ -222,8 +213,6 @@
       <option value="andamento">Em Andamento (Automático)</option>
       <option value="concluida">Concluída</option>
     </select>
-    <p style="font-size:11px; color:#666; margin-top:4px;">O progresso da barra é calculado automaticamente com base nas datas. O status "Concluída" pinta a barra de cinza.</p>
-    
     <label>Observações</label>
     <textarea id="taskNotes" placeholder="Detalhes do serviço..."></textarea>
     <div class="msg" id="taskMsg"></div>
@@ -253,8 +242,11 @@
 </div>
 
 <script>
-/* ========== DADOS E PERSISTÊNCIA ========== */
-const STORAGE_KEY = 'oficina_gantt_v3';
+/* ========== CONEXÃO COM O SUPABASE ========== */
+const SUPABASE_URL = 'https://wqtzhiocmdxlipcsbdb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndxdHpoaGlvY21keGlpcGNzYmRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDk3MDUsImV4cCI6MjEwODc4NTcwNX0.s2g9KplJwoxDqlB4eSCIIPN8TK09IEzb1-dgHL9_pXI';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let data = [];
 let expanded = {};
 let dayWidth = 26;
@@ -263,21 +255,45 @@ let selectedTaskId = null;
 
 function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2,7); }
 
-function load() {
+/* ========== CARREGAR DADOS DA NUVEM ========== */
+async function load() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) { data = JSON.parse(raw); } 
-    else { data = []; save(); }
-  } catch(e) { data = []; }
+    const { data: tarefas, error } = await _supabase
+      .from('tarefas')
+      .select('*')
+      .order('start_date', { ascending: true });
+    
+    if (error) throw error;
+    
+    // Converte os dados do Supabase (snake_case) para o formato do HTML
+    data = (tarefas || []).map(t => ({
+      id: t.id,
+      parentId: t.parent_id,
+      name: t.name,
+      owner: t.owner,
+      start: t.start_date,
+      end: t.end_date,
+      status: t.status,
+      notes: t.notes,
+      justificativas: t.justificativas || []
+    }));
+    
+  } catch(e) { 
+    console.error('Erro ao carregar:', e);
+    alert('Erro ao conectar com o banco de dados. Verifique sua internet ou as configurações do Supabase.');
+    data = []; 
+  }
   updateBackupInfo();
-}
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); updateBackupInfo(); }
-function updateBackupInfo() {
-  const el = document.getElementById('backupInfo');
-  if (el) el.textContent = `${data.length} item(ns) salvos neste navegador`;
+  document.getElementById('loadingOverlay').style.display = 'none';
+  render();
 }
 
-/* ========== BACKUP / RESTAURAÇÃO ========== */
+function updateBackupInfo() {
+  const el = document.getElementById('backupInfo');
+  if (el) el.textContent = `${data.length} tarefa(s) sincronizada(s) na nuvem`;
+}
+
+/* ========== BACKUP LOCAL (Cópia de Segurança) ========== */
 function exportBackup() {
   const payload = { app: 'oficina-gantt', version: 3, exportedAt: new Date().toISOString(), tarefas: data };
   const json = JSON.stringify(payload, null, 2);
@@ -289,30 +305,6 @@ function exportBackup() {
   a.href = url; a.download = `backup_oficina_${stamp}.json`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-function importBackup(evt) {
-  const file = evt.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const parsed = JSON.parse(e.target.result);
-      let tarefas;
-      if (Array.isArray(parsed)) tarefas = parsed;
-      else if (parsed && Array.isArray(parsed.tarefas)) tarefas = parsed.tarefas;
-      else throw new Error('Formato inválido');
-      tarefas.forEach(t => {
-        if (!t.id || !t.name || !t.start || !t.end) throw new Error('Item sem campos obrigatórios.');
-      });
-      if (!confirm(`Importar ${tarefas.length} item(ns)?\n\nOs dados atuais serão SUBSTITUÍDOS.`)) { evt.target.value = ''; return; }
-      data = tarefas; expanded = {};
-      data.filter(t => !t.parentId).forEach(t => expanded[t.id] = true);
-      save(); render();
-      alert('Backup importado com sucesso!');
-    } catch (err) { alert('Erro ao importar: ' + err.message); }
-    evt.target.value = '';
-  };
-  reader.readAsText(file);
 }
 
 /* ========== DATAS ========== */
@@ -329,23 +321,23 @@ function getRoots() { return data.filter(t => !t.parentId); }
 function getSubtree(id) { const out = [data.find(t => t.id === id)]; getChildren(id).forEach(c => out.push(...getSubtree(c.id))); return out; }
 
 /* ========== CONTROLE DE PAUSA ========== */
-function togglePause(id) {
+async function togglePause(id) {
   const t = data.find(x => x.id === id);
   if (!t) return;
-  
-  if (t.status === 'concluida') {
-    alert('Tarefas concluídas não podem ser pausadas.');
-    return;
-  }
+  if (t.status === 'concluida') { alert('Tarefas concluídas não podem ser pausadas.'); return; }
 
-  if (t.status === 'pausada') {
-    // Retomar: Volta para em andamento
-    t.status = 'andamento';
-  } else {
-    // Pausar
-    t.status = 'pausada';
+  const novoStatus = t.status === 'pausada' ? 'andamento' : 'pausada';
+  
+  try {
+    const { error } = await _supabase.from('tarefas').update({ status: novoStatus }).eq('id', id);
+    if (error) throw error;
+    
+    t.status = novoStatus;
+    render();
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao pausar/retomar no banco de dados.');
   }
-  save(); render();
 }
 
 /* ========== CÁLCULO DE PROGRESSO AUTOMÁTICO ========== */
@@ -358,7 +350,7 @@ function calcularProgresso(tarefa) {
   const fim = parseDate(tarefa.end);
   
   if (hoje < inicio) return 0;
-  if (hoje >= fim) return 100; // Já passou do prazo ou chegou no último dia
+  if (hoje >= fim) return 100;
   
   const totalDias = daysBetween(inicio, fim) + 1;
   const diasPassados = daysBetween(inicio, hoje) + 1;
@@ -367,7 +359,7 @@ function calcularProgresso(tarefa) {
   return Math.min(100, Math.max(0, pct));
 }
 
-/* ========== RENDER ========== */
+/* ========== RENDER (IGUAL AO ANTERIOR) ========== */
 function render() { renderHead(); renderBody(); }
 
 function renderHead() {
@@ -415,6 +407,7 @@ function renderHead() {
   }
   document.getElementById('ganttHead').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
 }
+
 function monthLabel(d) {
   const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   return `${meses[d.getMonth()]} / ${d.getFullYear()}`;
@@ -482,7 +475,7 @@ function renderBody() {
     ganttTd.colSpan = totalDays;
     ganttTd.className = 'gantt-cell';
     ganttTd.style.position = 'relative';
-    ganttTd.style.height = '28px'; // Um pouco mais alto para acomodar o tracejado
+    ganttTd.style.height = '28px';
     ganttTd.style.minWidth = (totalDays * dayWidth) + 'px';
 
     const bar = document.createElement('div');
@@ -490,12 +483,7 @@ function renderBody() {
     bar.style.left = (offset * dayWidth) + 'px';
     bar.style.width = (span * dayWidth) + 'px';
     bar.title = `${t.name}\n${formatBR(t.start)} → ${formatBR(t.end)} (${dur}d)\nProgresso: ${progresso}%`;
-    
-    // Desenha o preenchimento interno da barra
-    bar.innerHTML = `
-      <div class="bar-fill" style="width:${progresso}%"></div>
-      <span class="bar-text">${span >= 3 && progresso > 0 ? progresso + '%' : ''}</span>
-    `;
+    bar.innerHTML = `<div class="bar-fill" style="width:${progresso}%"></div><span class="bar-text">${span >= 3 && progresso > 0 ? progresso + '%' : ''}</span>`;
     bar.onclick = () => editTask(t.id);
     ganttTd.appendChild(bar);
 
@@ -552,7 +540,8 @@ function closeTaskModal() { document.getElementById('taskModal').classList.remov
 function addSubtask(parentId) { openTaskModal(null, parentId); }
 function editTask(id) { const t = data.find(x => x.id === id); if (t) openTaskModal(t, t.parentId); }
 
-function saveTask() {
+/* ========== SALVAR TAREFA NA NUVEM ========== */
+async function saveTask() {
   const id = document.getElementById('taskId').value;
   const parentId = document.getElementById('taskParentId').value || null;
   const name = document.getElementById('taskName').value.trim();
@@ -577,18 +566,41 @@ function saveTask() {
       return;
     }
   }
-  applyTask({ id, parentId, name, owner, start, end, status, notes });
+  await applyTask({ id, parentId, name, owner, start, end, status, notes });
 }
 
-function applyTask(p) {
-  if (p.id) {
-    const t = data.find(x => x.id === p.id);
-    if (t) Object.assign(t, p);
-  } else {
-    data.push({ id: uid(), parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, status: p.status, notes: p.notes });
-    if (p.parentId) expanded[p.parentId] = true;
+async function applyTask(p) {
+  const payload = {
+    id: p.id || uid(),
+    parent_id: p.parentId,
+    name: p.name,
+    owner: p.owner || '',
+    start_date: p.start,
+    end_date: p.end,
+    status: p.status,
+    notes: p.notes || '',
+    justificativas: p.justificativas || []
+  };
+
+  try {
+    const { error } = await _supabase.from('tarefas').upsert(payload);
+    if (error) throw error;
+
+    // Atualiza a tela localmente
+    if (p.id) {
+      const t = data.find(x => x.id === p.id);
+      if (t) Object.assign(t, p);
+    } else {
+      data.push({ id: payload.id, parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, status: p.status, notes: p.notes, justificativas: [] });
+      if (p.parentId) expanded[p.parentId] = true;
+    }
+    closeTaskModal(); 
+    render();
+    updateBackupInfo();
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao salvar a tarefa no banco de dados.');
   }
-  save(); closeTaskModal(); render();
 }
 
 /* ========== JUSTIFICATIVA ========== */
@@ -601,43 +613,70 @@ function cancelJustify() {
   pendingEdit = null;
   document.getElementById('justifyModal').classList.remove('active');
 }
-function confirmJustify() {
+async function confirmJustify() {
   const txt = document.getElementById('justifyText').value.trim();
   const msg = document.getElementById('justifyMsg');
   if (txt.length < 5) { msg.textContent = 'Informe uma justificativa com pelo menos 5 caracteres.'; msg.classList.add('show'); return; }
   const p = pendingEdit;
   if (!p) { cancelJustify(); return; }
   const original = data.find(x => x.id === p.id);
+  
   const log = (original.justificativas || []);
   log.push({ data: new Date().toISOString(), de: { inicio: original.start, entrega: original.end }, para: { inicio: p.start, entrega: p.end }, motivo: txt });
   p.justificativas = log;
+  
   document.getElementById('justifyModal').classList.remove('active');
   pendingEdit = null;
-  applyTask(p);
+  await applyTask(p);
 }
 
-/* ========== EXCLUIR ========== */
-function deleteTask(id) {
+/* ========== EXCLUIR DA NUVEM ========== */
+async function deleteTask(id) {
   const t = data.find(x => x.id === id); if (!t) return;
   const children = getChildren(id);
   const hasChildren = children.length > 0;
+  
   if (!hasChildren) {
     if (!confirm(`Excluir a tarefa "${t.name}"?\n\nEsta ação não pode ser desfeita.`)) return;
-    removeTaskAndSubtree(id); return;
+    await removeTaskAndSubtree(id); return;
   }
+  
   const msg = `A tarefa "${t.name}" possui ${children.length} subtarefa(s).\n\nOK = EXCLUIR TUDO (tarefa + subtarefas).\nCancelar = escolher outra opção.`;
-  if (confirm(msg)) { removeTaskAndSubtree(id); return; }
+  if (confirm(msg)) { await removeTaskAndSubtree(id); return; }
+  
   const mover = confirm(`Deseja MANTER as subtarefas de "${t.name}"?\n\nOK = manter subtarefas (promovidas a tarefas principais)\nCancelar = não excluir nada`);
   if (mover) {
-    children.forEach(c => { c.parentId = null; });
-    data = data.filter(x => x.id !== id);
-    save(); render();
+    try {
+      // Promove subtarefas
+      for (let c of children) {
+        await _supabase.from('tarefas').update({ parent_id: null }).eq('id', c.id);
+      }
+      // Exclui o pai
+      await _supabase.from('tarefas').delete().eq('id', id);
+      
+      // Atualiza local
+      children.forEach(c => { c.parentId = null; });
+      data = data.filter(x => x.id !== id);
+      render();
+      updateBackupInfo();
+    } catch(e) {
+      console.error(e); alert('Erro ao excluir.');
+    }
   }
 }
-function removeTaskAndSubtree(id) {
+
+async function removeTaskAndSubtree(id) {
   const ids = getSubtree(id).map(x => x.id);
-  data = data.filter(x => !ids.includes(x.id));
-  save(); render();
+  try {
+    const { error } = await _supabase.from('tarefas').delete().in('id', ids);
+    if (error) throw error;
+    
+    data = data.filter(x => !ids.includes(x.id));
+    render();
+    updateBackupInfo();
+  } catch(e) {
+    console.error(e); alert('Erro ao excluir do banco de dados.');
+  }
 }
 
 /* ========== SELEÇÃO + DELETE ========== */
@@ -662,7 +701,6 @@ document.addEventListener('keydown', e => {
 
 /* ========== INIT ========== */
 load();
-render();
 </script>
 </body>
 </html>
