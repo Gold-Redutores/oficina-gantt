@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Gantt - Controle de Serviços da Oficina</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #f0f2f5;
+    color: #222;
+    padding: 20px;
+  }
+  h1 { font-size: 22px; margin-bottom: 15px; color: #1a3d6d; }
+  .toolbar {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 15px; align-items: center;
+  }
+  button {
+    padding: 8px 14px; border: none; border-radius: 4px;
+    background: #1a73e8; color: #fff; cursor: pointer;
+    font-size: 13px; transition: .2s;
+  }
+  button:hover { background: #1558b0; }
+  button.secondary { background: #5f6368; }
+  button.secondary:hover { background: #3c4043; }
+  button.danger { background: #d93025; }
+  button.danger:hover { background: #a50e0e; }
+  .container {
+    background: #fff; border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.15);
+    overflow: auto;
+    position: relative;
+  }
+  table.gantt {
+    border-collapse: collapse;
+    font-size: 12px;
+    min-width: 100%;
+  }
+  table.gantt th, table.gantt td {
+    border: 1px solid #e0e0e0;
+    padding: 4px 6px;
+    white-space: nowrap;
+  }
+  table.gantt thead th {
+    background: #1a73e8;
+    color: #fff;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    text-align: center;
+    font-size: 11px;
+  }
+  table.gantt .col-task { min-width: 300px; text-align: left; }
+  table.gantt .col-info { min-width: 90px; text-align: center; }
+  table.gantt tbody tr:hover { background: #f5f9ff; }
+  table.gantt tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
+  .task-name { display: flex; align-items: center; gap: 6px; }
+  .task-name .indent { display: inline-block; }
+  .tarefa-pai { font-weight: 600; color: #1a3d6d; }
+  .subtask-name { color: #444; }
+  .actions { display: flex; gap: 4px; justify-content: center; }
+  .actions button {
+    padding: 3px 8px; font-size: 11px; background: #e8f0fe; color: #1a73e8;
+  }
+  .actions button:hover { background: #d2e3fc; }
+  .actions button.del {
+    background: #fce8e6; color: #d93025; font-weight: 600;
+  }
+  .actions button.del:hover { background: #f6c7c2; }
+
+  .gantt-cell { position: relative; min-width: 24px; padding: 0 !important; }
+  .bar {
+    position: absolute; top: 4px; bottom: 4px; border-radius: 3px;
+    background: #1a73e8; cursor: pointer; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 10px; font-weight: 600;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.1);
+    transition: filter .15s;
+  }
+  .bar:hover { filter: brightness(1.1); }
+  .bar.subtask { background: #34a853; top: 8px; bottom: 8px; }
+  .bar.overdue { background: #d93025; }
+  .bar.done { background: #9aa0a6; }
+
+  .progress-bar {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: rgba(255,255,255,.35);
+  }
+  .today-line {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: #ea4335; z-index: 4; pointer-events: none;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: #fff; border-radius: 8px; padding: 20px;
+    width: 480px; max-width: 95vw; max-height: 90vh; overflow: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  }
+  .modal h2 { font-size: 16px; margin-bottom: 15px; color: #1a3d6d; }
+  .modal label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: #555; margin-bottom: 4px; margin-top: 10px;
+  }
+  .modal input, .modal select, .modal textarea {
+    width: 100%; padding: 7px 9px; border: 1px solid #ccc;
+    border-radius: 4px; font-size: 13px; font-family: inherit;
+  }
+  .modal textarea { resize: vertical; min-height: 60px; }
+  .modal .row { display: flex; gap: 10px; }
+  .modal .row > div { flex: 1; }
+  .modal .msg {
+    color: #d93025; font-size: 12px; margin-top: 8px;
+    display: none;
+  }
+  .modal .msg.show { display: block; }
+  .modal .footer {
+    display: flex; justify-content: flex-end; gap: 8px;
+    margin-top: 18px;
+  }
+  .badge {
+    display: inline-block; padding: 1px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; margin-left: 6px;
+  }
+  .badge-pai { background: #e8f0fe; color: #1a73e8; }
+  .badge-sub { background: #e6f4ea; color: #137333; }
+  .badge-late { background: #fce8e6; color: #d93025; }
+
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    font-size: 11px; margin-top: 10px; color: #555;
+  }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend i {
+    width: 14px; height: 10px; border-radius: 2px; display: inline-block;
+  }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .toolbar, .actions, .modal-overlay, .no-print { display: none !important; }
+    .container { box-shadow: none; overflow: visible; }
+    table.gantt thead th { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table.gantt { font-size: 9px; }
+    h1 { font-size: 16px; }
+    tr.selected { outline: none !important; background: transparent !important; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🛠️ Gantt — Controle de Serviços Pendentes da Oficina</h1>
+
+<div class="toolbar no-print">
+  <button onclick="openTaskModal()">➕ Nova Tarefa</button>
+  <button class="secondary" onclick="window.print()">🖨️ Imprimir</button>
+  <button class="secondary" onclick="expandAll(true)">Expandir Tudo</button>
+  <button class="secondary" onclick="expandAll(false)">Recolher Tudo</button>
+  <button class="danger" onclick="resetData()">Restaurar Exemplo</button>
+</div>
+
+<div class="container">
+  <table class="gantt" id="ganttTable">
+    <thead id="ganttHead"></thead>
+    <tbody id="ganttBody"></tbody>
+  </table>
+</div>
+
+<div class="legend no-print">
+  <span><i style="background:#1a73e8"></i> Tarefa</span>
+  <span><i style="background:#34a853"></i> Subtarefa</span>
+  <span><i style="background:#d93025"></i> Atrasada</span>
+  <span><i style="background:#9aa0a6"></i> Concluída</span>
+  <span><i style="background:#ea4335;width:3px"></i> Hoje</span>
+  <span>💡 Dica: clique na linha + tecla <b>Delete</b> para apagar</span>
+</div>
+
+<!-- ============ MODAL TAREFA / SUBTAREFA ============ -->
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <h2 id="taskModalTitle">Nova Tarefa</h2>
+    <input type="hidden" id="taskId">
+    <input type="hidden" id="taskParentId">
+
+    <label>Nome *</label>
+    <input type="text" id="taskName" placeholder="Ex.: Troca de óleo">
+
+    <label>Responsável</label>
+    <input type="text" id="taskOwner" placeholder="Ex.: João Mecânico">
+
+    <div class="row">
+      <div>
+        <label>Data de Início *</label>
+        <input type="date" id="taskStart">
+      </div>
+      <div>
+        <label>Data de Entrega *</label>
+        <input type="date" id="taskEnd">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Progresso (%)</label>
+        <input type="number" id="taskProgress" min="0" max="100" value="0">
+      </div>
+      <div>
+        <label>Status</label>
+        <select id="taskStatus">
+          <option value="pendente">Pendente</option>
+          <option value="andamento">Em Andamento</option>
+          <option value="concluida">Concluída</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Observações</label>
+    <textarea id="taskNotes" placeholder="Detalhes do serviço..."></textarea>
+
+    <div class="msg" id="taskMsg"></div>
+
+    <div class="footer">
+      <button class="secondary" onclick="closeTaskModal()">Cancelar</button>
+      <button onclick="saveTask()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL JUSTIFICATIVA (edições de data) ============ -->
+<div class="modal-overlay" id="justifyModal">
+  <div class="modal">
+    <h2>⚠️ Alteração de Prazo</h2>
+    <p style="font-size:12px;color:#555;margin-bottom:10px;">
+      A alteração de datas exige justificativa. Os prazos poderão ser editados,
+      mas ficará registrado o motivo.
+    </p>
+    <label>Motivo da alteração *</label>
+    <textarea id="justifyText" placeholder="Descreva o motivo da alteração de datas..."></textarea>
+    <div class="msg" id="justifyMsg"></div>
+    <div class="footer">
+      <button class="secondary" onclick="cancelJustify()">Cancelar</button>
+      <button class="danger" onclick="confirmJustify()">Confirmar Alteração</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   DADOS
+   ========================================================= */
+const STORAGE_KEY = 'oficina_gantt_v1';
+let data = [];
+let expanded = {};
+let dayWidth = 26;      // largura de cada dia
+let pendingEdit = null; // edição aguardando justificativa
+let selectedTaskId = null;
+
+function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2,7); }
+
+function seedData() {
+  const hoje = new Date();
+  const fmt = d => d.toISOString().slice(0,10);
+  const add = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+
+  const t1 = uid();
+  const s1 = uid(), s2 = uid();
+  data = [
+    { id: t1, parentId: null, name: 'Revisão Motor — Caminhão ABC-1234',
+      owner: 'Carlos', start: fmt(add(hoje,-2)), end: fmt(add(hoje,4)),
+      progress: 40, status: 'andamento', notes: 'Cliente aguarda entrega até sexta.' },
+    { id: s1, parentId: t1, name: 'Desmontagem e diagnóstico',
+      owner: 'Carlos', start: fmt(add(hoje,-2)), end: fmt(add(hoje,0)),
+      progress: 100, status: 'concluida', notes: '' },
+    { id: s2, parentId: t1, name: 'Troca de peças e montagem',
+      owner: 'João', start: fmt(add(hoje,1)), end: fmt(add(hoje,4)),
+      progress: 10, status: 'andamento', notes: '' },
+
+    { id: uid(), parentId: null, name: 'Troca de Óleo — Carro XYZ-5678',
+      owner: 'Maria', start: fmt(add(hoje,-1)), end: fmt(add(hoje,1)),
+      progress: 50, status: 'andamento', notes: '' },
+
+    { id: uid(), parentId: null, name: 'Alinhamento e Balanceamento — Van DEF-9012',
+      owner: 'Pedro', start: fmt(add(hoje,2)), end: fmt(add(hoje,5)),
+      progress: 0, status: 'pendente', notes: '' },
+  ];
+  expanded[t1] = true;
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { data = JSON.parse(raw); }
+    else { seedData(); save(); }
+  } catch(e) { seedData(); }
+}
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+function resetData() {
+  if (!confirm('Restaurar dados de exemplo? Os dados atuais serão perdidos.')) return;
+  seedData(); save(); render();
+}
+
+/* =========================================================
+   UTILIDADES DE DATA
+   ========================================================= */
+function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
+function fmtDate(d) {
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function addDays(d,n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function daysBetween(a,b){ return Math.round((b - a) / 86400000); }
+function todayStr(){ return fmtDate(new Date()); }
+
+/* =========================================================
+   ESTRUTURA HIERÁRQUICA
+   ========================================================= */
+function getChildren(id) { return data.filter(t => t.parentId === id); }
+function getRoots() { return data.filter(t => !t.parentId); }
+
+function getSubtree(id) {
+  const out = [data.find(t => t.id === id)];
+  getChildren(id).forEach(c => out.push(...getSubtree(c.id)));
+  return out;
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function render() {
+  renderHead();
+  renderBody();
+}
+
+function renderHead() {
+  let min = null, max = null;
+  data.forEach(t => {
+    if (!t.start || !t.end) return;
+    const s = parseDate(t.start), e = parseDate(t.end);
+    if (!min || s < min) min = new Date(s);
+    if (!max || e > max) max = new Date(e);
+  });
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  if (!min) min = addDays(hoje, -3);
+  if (!max) max = addDays(hoje, 10);
+  min = addDays(min, -3);
+  max = addDays(max, 5);
+  if (hoje < min) min = addDays(hoje, -2);
+  if (hoje > max) max = addDays(hoje, 3);
+
+  const totalDays = daysBetween(min, max) + 1;
+  window.__range = { min, max, totalDays };
+
+  const monthRow = [];
+  const dayRow = [];
+  let lastMonth = null;
+
+  monthRow.push(`<th class="col-task" rowspan="2">Tarefa / Serviço</th>`);
+  monthRow.push(`<th class="col-info" rowspan="2">Início</th>`);
+  monthRow.push(`<th class="col-info" rowspan="2">Entrega</th>`);
+  monthRow.push(`<th class="col-info" rowspan="2">Dur.</th>`);
+  monthRow.push(`<th class="col-info" rowspan="2">%</th>`);
+  monthRow.push(`<th class="col-info no-print" rowspan="2">Ações</th>`);
+
+  let mStart = 0;
+  const monthGroups = [];
+  for (let i = 0; i < totalDays; i++) {
+    const d = addDays(min, i);
+    const key = d.getFullYear() + '-' + d.getMonth();
+    if (key !== lastMonth) {
+      if (lastMonth !== null) monthGroups.push({ label: monthLabel(addDays(min, mStart)), span: i - mStart });
+      mStart = i;
+      lastMonth = key;
+    }
+  }
+  monthGroups.push({ label: monthLabel(addDays(min, mStart)), span: totalDays - mStart });
+
+  monthGroups.forEach(g => {
+    monthRow.push(`<th colspan="${g.span}" style="text-align:center;">${g.label}</th>`);
+  });
+
+  for (let i = 0; i < totalDays; i++) {
+    const d = addDays(min, i);
+    const dow = d.getDay();
+    const wd = ['D','S','T','Q','Q','S','S'][dow];
+    const isWeekend = dow === 0 || dow === 6;
+    const isToday = fmtDate(d) === todayStr();
+    const style = `min-width:${dayWidth}px;width:${dayWidth}px;` +
+      (isWeekend ? 'background:#eef1f6;' : '') +
+      (isToday ? 'background:#ea4335;color:#fff;' : '');
+    dayRow.push(`<th style="${style}" title="${fmtDate(d)}">${d.getDate()}<br><span style="font-size:8px;">${wd}</span></th>`);
+  }
+
+  document.getElementById('ganttHead').innerHTML =
+    `<tr>${monthRow.join('')}</tr>` +
+    `<tr>${dayRow.join('')}</tr>`;
+}
+
+function monthLabel(d) {
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return `${meses[d.getMonth()]} / ${d.getFullYear()}`;
+}
+
+function renderBody() {
+  const body = document.getElementById('ganttBody');
+  const rows = [];
+  const { min, totalDays } = window.__range;
+
+  function renderRow(t, level) {
+    const children = getChildren(t.id);
+    const hasChildren = children.length > 0;
+    const isExpanded = expanded[t.id] !== false && hasChildren;
+    const start = parseDate(t.start), end = parseDate(t.end);
+    const offset = daysBetween(min, start);
+    const span = daysBetween(start, end) + 1;
+    const dur = span;
+
+    const concluida = t.status === 'concluida' || t.progress >= 100;
+    const atrasada = !concluida && parseDate(t.end) < new Date(new Date().toDateString());
+    const barClass = 'bar ' + (level > 0 ? 'subtask ' : '') + (concluida ? 'done ' : '') + (atrasada ? 'overdue ' : '');
+
+    const tr = document.createElement('tr');
+    tr.dataset.id = t.id;
+    if (selectedTaskId === t.id) tr.classList.add('selected');
+
+    const indentPx = level * 20;
+    const arrow = hasChildren
+      ? `<span style="cursor:pointer;font-size:10px;width:14px;display:inline-block;" onclick="event.stopPropagation();toggleExpand('${t.id}')">${isExpanded ? '▼' : '▶'}</span>`
+      : `<span style="width:14px;display:inline-block;"></span>`;
+
+    const badge = level === 0
+      ? `<span class="badge badge-pai">TAREFA</span>`
+      : `<span class="badge badge-sub">SUB</span>`;
+    const lateBadge = atrasada ? `<span class="badge badge-late">ATRASADA</span>` : '';
+
+    tr.innerHTML = `
+      <td class="col-task">
+        <div class="task-name" style="padding-left:${indentPx}px;">
+          ${arrow}
+          <span class="${level === 0 ? 'tarefa-pai' : 'subtask-name'}">${escapeHtml(t.name)}</span>
+          ${badge}${lateBadge}
+          ${t.owner ? `<span style="color:#888;font-size:11px;margin-left:6px;">👤 ${escapeHtml(t.owner)}</span>` : ''}
+        </div>
+      </td>
+      <td class="col-info">${formatBR(t.start)}</td>
+      <td class="col-info">${formatBR(t.end)}</td>
+      <td class="col-info">${dur}d</td>
+      <td class="col-info">${t.progress||0}%</td>
+      <td class="col-info no-print">
+        <div class="actions">
+          <button title="Editar" onclick="event.stopPropagation();editTask('${t.id}')">✎</button>
+          <button title="Adicionar subtarefa" onclick="event.stopPropagation();addSubtask('${t.id}')">➕</button>
+          <button title="Excluir tarefa${hasChildren ? ' e subtarefas' : ''}" class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️ Excluir</button>
+        </div>
+      </td>
+    `;
+    rows.push(tr);
+
+    const ganttTd = document.createElement('td');
+    ganttTd.colSpan = totalDays;
+    ganttTd.className = 'gantt-cell';
+    ganttTd.style.position = 'relative';
+    ganttTd.style.height = '24px';
+    ganttTd.style.minWidth = (totalDays * dayWidth) + 'px';
+
+    const bar = document.createElement('div');
+    bar.className = barClass;
+    bar.style.left = (offset * dayWidth) + 'px';
+    bar.style.width = (span * dayWidth) + 'px';
+    bar.title = `${t.name}\n${formatBR(t.start)} → ${formatBR(t.end)} (${dur}d)\n${t.progress||0}%`;
+    bar.innerHTML = `<div class="progress-bar" style="width:${concluida?100:(t.progress||0)}%"></div>
+                     <span style="position:relative;z-index:2;">${span >= 3 ? (concluida?'✔ ':'') + (t.progress||0)+'%' : ''}</span>`;
+    bar.onclick = () => editTask(t.id);
+    ganttTd.appendChild(bar);
+
+    const hoje = new Date(new Date().toDateString());
+    if (hoje >= min && hoje <= addDays(min, totalDays-1)) {
+      const todayOffset = daysBetween(min, hoje);
+      const line = document.createElement('div');
+      line.className = 'today-line';
+      line.style.left = (todayOffset * dayWidth + dayWidth/2) + 'px';
+      ganttTd.appendChild(line);
+    }
+
+    const trGantt = document.createElement('tr');
+    trGantt.className = 'gantt-row-' + t.id;
+    trGantt.dataset.id = t.id;
+    if (selectedTaskId === t.id) trGantt.classList.add('selected');
+    const tdInfo = document.createElement('td');
+    tdInfo.colSpan = 6;
+    tdInfo.style.background = '#fafbfc';
+    tdInfo.style.borderRight = '1px solid #e0e0e0';
+    trGantt.appendChild(tdInfo);
+    trGantt.appendChild(ganttTd);
+    rows.push(trGantt);
+
+    if (hasChildren && isExpanded) {
+      children.forEach(c => renderRow(c, level + 1));
+    }
+  }
+
+  getRoots().forEach(r => renderRow(r, 0));
+  body.innerHTML = '';
+  rows.forEach(r => body.appendChild(r));
+}
+
+function escapeHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatBR(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/* =========================================================
+   EXPANDIR / RECOLHER
+   ========================================================= */
+function toggleExpand(id) {
+  expanded[id] = expanded[id] === false ? true : false;
+  render();
+}
+function expandAll(v) {
+  data.forEach(t => expanded[t.id] = v);
+  render();
+}
+
+/* =========================================================
+   MODAL TAREFA
+   ========================================================= */
+function openTaskModal(task, parentId) {
+  const modal = document.getElementById('taskModal');
+  document.getElementById('taskModalTitle').textContent = task ? 'Editar Tarefa' : (parentId ? 'Nova Subtarefa' : 'Nova Tarefa');
+  document.getElementById('taskId').value = task ? task.id : '';
+  document.getElementById('taskParentId').value = parentId || '';
+  document.getElementById('taskName').value = task ? task.name : '';
+  document.getElementById('taskOwner').value = task ? (task.owner||'') : '';
+  document.getElementById('taskStart').value = task ? task.start : todayStr();
+  document.getElementById('taskEnd').value = task ? task.end : fmtDate(addDays(new Date(), 3));
+  document.getElementById('taskProgress').value = task ? (task.progress||0) : 0;
+  document.getElementById('taskStatus').value = task ? (task.status||'pendente') : 'pendente';
+  document.getElementById('taskNotes').value = task ? (task.notes||'') : '';
+  document.getElementById('taskMsg').classList.remove('show');
+  modal.classList.add('active');
+}
+function closeTaskModal() { document.getElementById('taskModal').classList.remove('active'); }
+
+function addSubtask(parentId) { openTaskModal(null, parentId); }
+
+function editTask(id) {
+  const t = data.find(x => x.id === id);
+  if (t) openTaskModal(t, t.parentId);
+}
+
+function saveTask() {
+  const id = document.getElementById('taskId').value;
+  const parentId = document.getElementById('taskParentId').value || null;
+  const name = document.getElementById('taskName').value.trim();
+  const owner = document.getElementById('taskOwner').value.trim();
+  const start = document.getElementById('taskStart').value;
+  const end = document.getElementById('taskEnd').value;
+  const progress = Math.max(0, Math.min(100, parseInt(document.getElementById('taskProgress').value)||0));
+  const status = document.getElementById('taskStatus').value;
+  const notes = document.getElementById('taskNotes').value.trim();
+  const msg = document.getElementById('taskMsg');
+
+  if (!name) { msg.textContent = 'Informe o nome da tarefa.'; msg.classList.add('show'); return; }
+  if (!start || !end) { msg.textContent = 'Informe as datas de início e entrega.'; msg.classList.add('show'); return; }
+  if (parseDate(end) < parseDate(start)) { msg.textContent = 'A data de entrega não pode ser anterior ao início.'; msg.classList.add('show'); return; }
+
+  if (id) {
+    const original = data.find(x => x.id === id);
+    const dateChanged = original && (original.start !== start || original.end !== end);
+    if (dateChanged) {
+      pendingEdit = { id, parentId, name, owner, start, end, progress, status, notes };
+      closeTaskModal();
+      openJustify();
+      return;
+    }
+  }
+
+  applyTask({ id, parentId, name, owner, start, end, progress, status, notes });
+}
+
+function applyTask(p) {
+  if (p.id) {
+    const t = data.find(x => x.id === p.id);
+    if (t) {
+      Object.assign(t, p);
+      if (t.parentId === null) expanded[t.id] = expanded[t.id] !== false;
+    }
+  } else {
+    const newTask = { id: uid(), parentId: p.parentId, name: p.name, owner: p.owner,
+      start: p.start, end: p.end, progress: p.progress, status: p.status, notes: p.notes };
+    data.push(newTask);
+    if (p.parentId) expanded[p.parentId] = true;
+  }
+  save();
+  closeTaskModal();
+  render();
+}
+
+/* =========================================================
+   MODAL JUSTIFICATIVA
+   ========================================================= */
+function openJustify() {
+  document.getElementById('justifyText').value = '';
+  document.getElementById('justifyMsg').classList.remove('show');
+  document.getElementById('justifyModal').classList.add('active');
+}
+function cancelJustify() {
+  pendingEdit = null;
+  document.getElementById('justifyModal').classList.remove('active');
+}
+function confirmJustify() {
+  const txt = document.getElementById('justifyText').value.trim();
+  const msg = document.getElementById('justifyMsg');
+  if (txt.length < 5) { msg.textContent = 'Informe uma justificativa com pelo menos 5 caracteres.'; msg.classList.add('show'); return; }
+
+  const p = pendingEdit;
+  if (!p) { cancelJustify(); return; }
+
+  const original = data.find(x => x.id === p.id);
+  const log = (original.justificativas || []);
+  log.push({
+    data: new Date().toISOString(),
+    de: { inicio: original.start, entrega: original.end },
+    para: { inicio: p.start, entrega: p.end },
+    motivo: txt
+  });
+  p.justificativas = log;
+
+  document.getElementById('justifyModal').classList.remove('active');
+  pendingEdit = null;
+  applyTask(p);
+}
+
+/* =========================================================
+   EXCLUIR
+   ========================================================= */
+function deleteTask(id) {
+  const t = data.find(x => x.id === id);
+  if (!t) return;
+
+  const children = getChildren(id);
+  const hasChildren = children.length > 0;
+
+  if (!hasChildren) {
+    if (!confirm(`Excluir a tarefa "${t.name}"?\n\nEsta ação não pode ser desfeita.`)) return;
+    removeTaskAndSubtree(id);
+    return;
+  }
+
+  // Tarefa com subtarefas: pergunta o que fazer
+  const msg =
+    `A tarefa "${t.name}" possui ${children.length} subtarefa(s).\n\n` +
+    `Clique em OK para EXCLUIR TUDO (tarefa + subtarefas).\n` +
+    `Clique em Cancelar para escolher outra opção.`;
+
+  if (confirm(msg)) {
+    removeTaskAndSubtree(id);
+    return;
+  }
+
+  // Menu secundário: mover subtarefas para o nível superior?
+  const mover = confirm(
+    `Deseja MANTER as subtarefas de "${t.name}"?\n\n` +
+    `OK = manter subtarefas (serão promovidas a tarefas principais)\n` +
+    `Cancelar = não excluir nada`
+  );
+  if (mover) {
+    children.forEach(c => { c.parentId = null; });
+    data = data.filter(x => x.id !== id);
+    save();
+    render();
+  }
+}
+
+function removeTaskAndSubtree(id) {
+  const ids = getSubtree(id).map(x => x.id);
+  data = data.filter(x => !ids.includes(x.id));
+  save();
+  render();
+}
+
+/* =========================================================
+   SELEÇÃO + ATALHO DELETE
+   ========================================================= */
+document.addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr) {
+    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+    tr.classList.add('selected');
+    selectedTaskId = tr.dataset.id;
+  } else if (!e.target.closest('.modal-overlay')) {
+    // clicou fora — limpa seleção (apenas fora de modais)
+    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+    selectedTaskId = null;
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Delete' && selectedTaskId) {
+    deleteTask(selectedTaskId);
+    selectedTaskId = null;
+  }
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    pendingEdit = null;
+  }
+});
+
+/* =========================================================
+   INIT
+   ========================================================= */
+load();
+render();
+</script>
+</body>
+</html>
