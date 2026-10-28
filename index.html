@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gantt - Controle de Serviços - Gold</title>
-<!-- Biblioteca do Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,7 +22,7 @@
     content: "";
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-image: url('fundo.jpg'); 
+    background-image: url('fundo.png'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -63,11 +62,11 @@
 
   /* ===== TABELA ===== */
   .container { background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.15); overflow: auto; position: relative; }
-  table.gantt { border-collapse: collapse; font-size: 12px; min-width: 100%; }
+  table.gantt { border-collapse: collapse; font-size: 12px; width: 100%; }
   table.gantt th, table.gantt td { border: 1px solid #e0e0e0; padding: 4px 6px; white-space: nowrap; }
   table.gantt thead th { background: #1a73e8; color: #fff; font-weight: 600; position: sticky; top: 0; z-index: 5; text-align: center; font-size: 11px; }
   table.gantt .col-task { min-width: 300px; text-align: left; }
-  table.gantt .col-info { min-width: 90px; text-align: center; }
+  table.gantt .col-info { min-width: 80px; text-align: center; }
   table.gantt tbody tr:hover { background: #f5f9ff; }
   table.gantt tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
   
@@ -83,7 +82,7 @@
   .actions button.pause { background: #fef7e0; color: #b06000; font-weight: 600; }
   .actions button.pause:hover { background: #feefc3; }
 
-  /* ===== BARRAS DO GANTT ===== */
+  /* ===== BARRAS DO GANTT (AGORA DENTRO DA MESMA LINHA) ===== */
   .gantt-cell { position: relative; min-width: 24px; padding: 0 !important; }
   .bar { 
     position: absolute; top: 4px; bottom: 4px; border-radius: 3px; 
@@ -153,14 +152,13 @@
 </head>
 <body>
 
-<!-- Tela de carregamento (some quando os dados chegam) -->
 <div id="loadingOverlay">
   <div class="spinner"></div>
   Carregando dados do servidor...
 </div>
 
 <div class="header">
-  <img src="logo.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
+  <img src="logo-gold.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
   <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
 </div>
 
@@ -255,32 +253,16 @@ let selectedTaskId = null;
 
 function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2,7); }
 
-/* ========== CARREGAR DADOS DA NUVEM ========== */
 async function load() {
   try {
-    const { data: tarefas, error } = await _supabase
-      .from('tarefas')
-      .select('*')
-      .order('start_date', { ascending: true });
-    
+    const { data: tarefas, error } = await _supabase.from('tarefas').select('*').order('start_date', { ascending: true });
     if (error) throw error;
-    
-    // Converte os dados do Supabase (snake_case) para o formato do HTML
     data = (tarefas || []).map(t => ({
-      id: t.id,
-      parentId: t.parent_id,
-      name: t.name,
-      owner: t.owner,
-      start: t.start_date,
-      end: t.end_date,
-      status: t.status,
-      notes: t.notes,
-      justificativas: t.justificativas || []
+      id: t.id, parentId: t.parent_id, name: t.name, owner: t.owner,
+      start: t.start_date, end: t.end_date, status: t.status, notes: t.notes, justificativas: t.justificativas || []
     }));
-    
   } catch(e) { 
     console.error('Erro ao carregar:', e);
-    alert('Erro ao conectar com o banco de dados. Verifique sua internet ou as configurações do Supabase.');
     data = []; 
   }
   updateBackupInfo();
@@ -293,7 +275,6 @@ function updateBackupInfo() {
   if (el) el.textContent = `${data.length} tarefa(s) sincronizada(s) na nuvem`;
 }
 
-/* ========== BACKUP LOCAL (Cópia de Segurança) ========== */
 function exportBackup() {
   const payload = { app: 'oficina-gantt', version: 3, exportedAt: new Date().toISOString(), tarefas: data };
   const json = JSON.stringify(payload, null, 2);
@@ -320,46 +301,34 @@ function getChildren(id) { return data.filter(t => t.parentId === id); }
 function getRoots() { return data.filter(t => !t.parentId); }
 function getSubtree(id) { const out = [data.find(t => t.id === id)]; getChildren(id).forEach(c => out.push(...getSubtree(c.id))); return out; }
 
-/* ========== CONTROLE DE PAUSA ========== */
 async function togglePause(id) {
   const t = data.find(x => x.id === id);
   if (!t) return;
   if (t.status === 'concluida') { alert('Tarefas concluídas não podem ser pausadas.'); return; }
-
   const novoStatus = t.status === 'pausada' ? 'andamento' : 'pausada';
-  
   try {
     const { error } = await _supabase.from('tarefas').update({ status: novoStatus }).eq('id', id);
     if (error) throw error;
-    
     t.status = novoStatus;
     render();
-  } catch(e) {
-    console.error(e);
-    alert('Erro ao pausar/retomar no banco de dados.');
-  }
+  } catch(e) { alert('Erro ao pausar/retomar.'); }
 }
 
-/* ========== CÁLCULO DE PROGRESSO AUTOMÁTICO ========== */
 function calcularProgresso(tarefa) {
   if (tarefa.status === 'concluida') return 100;
   if (tarefa.status === 'pendente') return 0;
-  
   const hoje = new Date(new Date().toDateString());
   const inicio = parseDate(tarefa.start);
   const fim = parseDate(tarefa.end);
-  
   if (hoje < inicio) return 0;
   if (hoje >= fim) return 100;
-  
   const totalDias = daysBetween(inicio, fim) + 1;
   const diasPassados = daysBetween(inicio, hoje) + 1;
-  
   let pct = Math.round((diasPassados / totalDias) * 100);
   return Math.min(100, Math.max(0, pct));
 }
 
-/* ========== RENDER (IGUAL AO ANTERIOR) ========== */
+/* ========== RENDER ========== */
 function render() { renderHead(); renderBody(); }
 
 function renderHead() {
@@ -378,14 +347,19 @@ function renderHead() {
   if (hoje > max) max = addDays(hoje, 3);
   const totalDays = daysBetween(min, max) + 1;
   window.__range = { min, max, totalDays };
+  
   const monthRow = [], dayRow = [];
   let lastMonth = null;
+  
   monthRow.push(`<th class="col-task" rowspan="2">Tarefa / Serviço</th>`);
   monthRow.push(`<th class="col-info" rowspan="2">Início</th>`);
   monthRow.push(`<th class="col-info" rowspan="2">Entrega</th>`);
   monthRow.push(`<th class="col-info" rowspan="2">Dur.</th>`);
   monthRow.push(`<th class="col-info" rowspan="2">Prog.</th>`);
-  monthRow.push(`<th class="col-info no-print" rowspan="2">Ações</th>`);
+  
+  // Mudança estrutural: Agora o gráfico é uma única coluna gigante ao lado dos dados
+  // e não mais uma linha extra embaixo.
+  
   let mStart = 0; const monthGroups = [];
   for (let i = 0; i < totalDays; i++) {
     const d = addDays(min, i);
@@ -396,7 +370,11 @@ function renderHead() {
     }
   }
   monthGroups.push({ label: monthLabel(addDays(min, mStart)), span: totalDays - mStart });
-  monthGroups.forEach(g => monthRow.push(`<th colspan="${g.span}" style="text-align:center;">${g.label}</th>`));
+  
+  // Adiciona o cabeçalho dos meses cobrindo a área do gráfico
+  monthRow.push(`<th colspan="${totalDays}" style="text-align:center;">Cronograma</th>`);
+  
+  // Adiciona o cabeçalho dos dias
   for (let i = 0; i < totalDays; i++) {
     const d = addDays(min, i); const dow = d.getDay();
     const wd = ['D','S','T','Q','Q','S','S'][dow];
@@ -405,6 +383,12 @@ function renderHead() {
     const style = `min-width:${dayWidth}px;width:${dayWidth}px;` + (isWeekend ? 'background:#eef1f6;' : '') + (isToday ? 'background:#ea4335;color:#fff;' : '');
     dayRow.push(`<th style="${style}" title="${fmtDate(d)}">${d.getDate()}<br><span style="font-size:8px;">${wd}</span></th>`);
   }
+  
+  // Cabeçalho da coluna de ações por último
+  monthRow.splice(5, 0, `<th class="col-info no-print" rowspan="2">Ações</th>`);
+  
+  // Como os meses não batem com os dias exatos se separarmos as colunas,
+  // faremos um cabeçalho de mês simplificado para os dias.
   document.getElementById('ganttHead').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
 }
 
@@ -468,14 +452,15 @@ function renderBody() {
           <button title="Adicionar subtarefa" onclick="event.stopPropagation();addSubtask('${t.id}')">➕</button>
           <button title="Excluir" class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️</button>
         </div>
-      </td>`;
-    rows.push(tr);
+      </td>
+    `;
 
+    // AQUI ESTÁ A MÁGICA: Adiciona a célula do gráfico NA MESMA LINHA
     const ganttTd = document.createElement('td');
     ganttTd.colSpan = totalDays;
     ganttTd.className = 'gantt-cell';
     ganttTd.style.position = 'relative';
-    ganttTd.style.height = '28px';
+    ganttTd.style.height = '30px';
     ganttTd.style.minWidth = (totalDays * dayWidth) + 'px';
 
     const bar = document.createElement('div');
@@ -496,17 +481,9 @@ function renderBody() {
       ganttTd.appendChild(line);
     }
 
-    const trGantt = document.createElement('tr');
-    trGantt.className = 'gantt-row-' + t.id;
-    trGantt.dataset.id = t.id;
-    if (selectedTaskId === t.id) trGantt.classList.add('selected');
-    const tdInfo = document.createElement('td');
-    tdInfo.colSpan = 6;
-    tdInfo.style.background = '#fafbfc';
-    tdInfo.style.borderRight = '1px solid #e0e0e0';
-    trGantt.appendChild(tdInfo);
-    trGantt.appendChild(ganttTd);
-    rows.push(trGantt);
+    // Adiciona o gráfico na mesma linha
+    tr.appendChild(ganttTd);
+    rows.push(tr);
     
     if (hasChildren && isExpanded) children.forEach(c => renderRow(c, level + 1));
   }
@@ -586,7 +563,6 @@ async function applyTask(p) {
     const { error } = await _supabase.from('tarefas').upsert(payload);
     if (error) throw error;
 
-    // Atualiza a tela localmente
     if (p.id) {
       const t = data.find(x => x.id === p.id);
       if (t) Object.assign(t, p);
@@ -647,21 +623,15 @@ async function deleteTask(id) {
   const mover = confirm(`Deseja MANTER as subtarefas de "${t.name}"?\n\nOK = manter subtarefas (promovidas a tarefas principais)\nCancelar = não excluir nada`);
   if (mover) {
     try {
-      // Promove subtarefas
       for (let c of children) {
         await _supabase.from('tarefas').update({ parent_id: null }).eq('id', c.id);
       }
-      // Exclui o pai
       await _supabase.from('tarefas').delete().eq('id', id);
-      
-      // Atualiza local
       children.forEach(c => { c.parentId = null; });
       data = data.filter(x => x.id !== id);
       render();
       updateBackupInfo();
-    } catch(e) {
-      console.error(e); alert('Erro ao excluir.');
-    }
+    } catch(e) { alert('Erro ao excluir.'); }
   }
 }
 
@@ -670,13 +640,10 @@ async function removeTaskAndSubtree(id) {
   try {
     const { error } = await _supabase.from('tarefas').delete().in('id', ids);
     if (error) throw error;
-    
     data = data.filter(x => !ids.includes(x.id));
     render();
     updateBackupInfo();
-  } catch(e) {
-    console.error(e); alert('Erro ao excluir do banco de dados.');
-  }
+  } catch(e) { alert('Erro ao excluir do banco de dados.'); }
 }
 
 /* ========== SELEÇÃO + DELETE ========== */
