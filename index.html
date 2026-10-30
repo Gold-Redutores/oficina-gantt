@@ -61,27 +61,31 @@
   button.success { background: #188038; } button.success:hover { background: #0d652d; }
 
   /* ===== TABELA ===== */
-  .container { background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.15); overflow: auto; position: relative; }
-  table.gantt { border-collapse: collapse; font-size: 12px; width: 100%; }
-  table.gantt th, table.gantt td { border: 1px solid #e0e0e0; padding: 4px 6px; white-space: nowrap; }
-  table.gantt thead th { background: #1a73e8; color: #fff; font-weight: 600; position: sticky; top: 0; z-index: 5; text-align: center; font-size: 11px; }
-  table.gantt .col-task { min-width: 300px; text-align: left; }
-  table.gantt .col-info { min-width: 80px; text-align: center; }
-  table.gantt tbody tr:hover { background: #f5f9ff; }
-  table.gantt tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
-  
-  .task-name { display: flex; align-items: center; gap: 6px; }
-  .tarefa-pai { font-weight: 600; color: #1a3d6d; }
-  .subtask-name { color: #444; }
-  
-  .actions { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
-  .actions button { padding: 3px 7px; font-size: 11px; background: #e8f0fe; color: #1a73e8; }
-  .actions button:hover { background: #d2e3fc; }
-  .actions button.del { background: #fce8e6; color: #d93025; font-weight: 600; }
-  .actions button.del:hover { background: #f6c7c2; }
-  .actions button.pause { background: #fef7e0; color: #b06000; font-weight: 600; }
-  .actions button.pause:hover { background: #feefc3; }
+    .container { 
+    background: #fff; 
+    border-radius: 6px; 
+    box-shadow: 0 1px 4px rgba(0,0,0,.15); 
+    overflow: auto; /* A barra de rolagem agora é do container inteiro */
+    position: relative; 
+    max-height: 80vh; /* Opcional: adiciona rolagem vertical se tiver muitas tarefas */
+  }
 
+  /* Fixa as colunas de texto no lado esquerdo para não rolarem junto com o gráfico */
+  table.gantt th.col-task, table.gantt td.col-task { position: sticky; left: 0; z-index: 6; background: #fff; }
+  table.gantt th.col-task { z-index: 10; background: #1a73e8; }
+  
+  table.gantt th.col-info, table.gantt td.col-info { position: sticky; z-index: 6; background: #fff; }
+  table.gantt th.col-info { z-index: 10; background: #1a73e8; }
+  
+  /* Posiciona as colunas de texto fixas de acordo com a largura */
+  table.gantt .col-task { min-width: 300px; left: 0; }
+  table.gantt .col-info:nth-child(2) { left: 300px; }
+  table.gantt .col-info:nth-child(3) { left: 390px; }
+  table.gantt .col-info:nth-child(4) { left: 480px; }
+  table.gantt .col-info:nth-child(5) { left: 570px; }
+  table.gantt .col-info:nth-child(6) { left: 660px; }
+
+  
   /* ===== BARRAS DO GANTT (AGORA DENTRO DA MESMA LINHA) ===== */
   .gantt-cell { position: relative; min-width: 24px; padding: 0 !important; }
   .bar { 
@@ -455,13 +459,16 @@ function renderBody() {
       </td>
     `;
 
-    // AQUI ESTÁ A MÁGICA: Adiciona a célula do gráfico NA MESMA LINHA
+    // Célula do gráfico na MESMA LINHA
     const ganttTd = document.createElement('td');
     ganttTd.colSpan = totalDays;
     ganttTd.className = 'gantt-cell';
     ganttTd.style.position = 'relative';
     ganttTd.style.height = '30px';
     ganttTd.style.minWidth = (totalDays * dayWidth) + 'px';
+    
+    // A MÁGICA ACONTECE AQUI: O corte (overflow hidden) fica SÓ na célula do gráfico!
+    ganttTd.style.overflow = 'hidden'; 
 
     const bar = document.createElement('div');
     bar.className = barClass;
@@ -481,12 +488,12 @@ function renderBody() {
       ganttTd.appendChild(line);
     }
 
-    // Adiciona o gráfico na mesma linha
     tr.appendChild(ganttTd);
     rows.push(tr);
     
     if (hasChildren && isExpanded) children.forEach(c => renderRow(c, level + 1));
   }
+  
   getRoots().forEach(r => renderRow(r, 0));
   body.innerHTML = '';
   rows.forEach(r => body.appendChild(r));
