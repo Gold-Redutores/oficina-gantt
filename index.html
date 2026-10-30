@@ -8,7 +8,6 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   
-  /* ===== PLANO DE FUNDO ===== */
   body { 
     font-family: 'Segoe UI', Tahoma, sans-serif; 
     color: #222; 
@@ -22,7 +21,7 @@
     content: "";
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-image: url('fundo.jpg'); 
+    background-image: url('fundo.png'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -31,7 +30,6 @@
     pointer-events: none;
   }
 
-  /* ===== TELA DE CARREGAMENTO ===== */
   #loadingOverlay {
     position: fixed; inset: 0; background: rgba(255,255,255,0.9);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -44,12 +42,10 @@
   }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-  /* ===== CABEÇALHO ===== */
   .header { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
   .header img { height: 50px; object-fit: contain; }
   .header h1 { font-size: 22px; color: #1a3d6d; margin: 0; }
 
-  /* ===== BOTÕES ===== */
   .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
   button { 
     padding: 8px 14px; border: none; border-radius: 4px; 
@@ -60,16 +56,62 @@
   button.secondary { background: #5f6368; } button.secondary:hover { background: #3c4043; }
   button.success { background: #188038; } button.success:hover { background: #0d652d; }
 
-  /* ===== TABELA ===== */
-  .container { background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.15); overflow: auto; position: relative; }
-  table.gantt { border-collapse: collapse; font-size: 12px; width: 100%; }
-  table.gantt th, table.gantt td { border: 1px solid #e0e0e0; padding: 4px 6px; white-space: nowrap; }
-  table.gantt thead th { background: #1a73e8; color: #fff; font-weight: 600; position: sticky; top: 0; z-index: 5; text-align: center; font-size: 11px; }
-  table.gantt .col-task { min-width: 300px; text-align: left; }
-  table.gantt .col-info { min-width: 80px; text-align: center; }
-  table.gantt tbody tr:hover { background: #f5f9ff; }
-  table.gantt tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
+  /* ===== LAYOUT DE DUAS TABELAS (DADOS + GRÁFICO) ===== */
+  .gantt-wrapper {
+    display: flex;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.15);
+    overflow: hidden; /* Evita que a barra de rolagem quebre o layout */
+    width: 100%;
+  }
+
+  /* Tabela da Esquerda (Dados Fixos) */
+  .table-fixed {
+    flex-shrink: 0;
+    border-right: 2px solid #1a73e8; /* Linha divisória azul forte */
+  }
+  .table-fixed th, .table-fixed td {
+    border: 1px solid #e0e0e0;
+    padding: 4px 6px;
+    white-space: nowrap;
+    background: #fff;
+    font-size: 12px;
+  }
+  .table-fixed thead th {
+    background: #1a73e8; color: #fff; font-weight: 600;
+    text-align: center; font-size: 11px;
+    height: 48px; /* Altura para alinhar com os 2 cabeçalhos da direita */
+  }
+  .table-fixed .col-task { width: 350px; text-align: left; }
+  .table-fixed .col-info { width: 80px; text-align: center; }
+  .table-fixed .col-actions { width: 110px; text-align: center; }
+
+  /* Tabela da Direita (Gráfico com Rolagem) */
+  .table-scroll {
+    overflow-x: auto;
+    flex-grow: 1;
+  }
+  .table-scroll table {
+    border-collapse: collapse;
+  }
+  .table-scroll th, .table-scroll td {
+    border: 1px solid #e0e0e0;
+    padding: 0;
+    background: #fff;
+  }
+  .table-scroll thead th {
+    background: #1a73e8; color: #fff; font-weight: 600; text-align: center; font-size: 11px;
+  }
+  .table-scroll thead tr:first-child th { height: 28px; } /* Altura do mês */
+  .table-scroll thead tr:last-child th { height: 20px; }  /* Altura dos dias */
+
+  /* Alinhamento das Linhas (Truque para as duas tabelas ficarem na mesma altura) */
+  .row-tarefa { height: 32px; }
+  .table-fixed tbody tr:hover, .table-scroll tbody tr:hover { background: #f5f9ff; }
+  .table-fixed tbody tr.selected, .table-scroll tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
   
+  /* Textos e Badges */
   .task-name { display: flex; align-items: center; gap: 6px; }
   .tarefa-pai { font-weight: 600; color: #1a3d6d; }
   .subtask-name { color: #444; }
@@ -82,11 +124,17 @@
   .actions button.pause { background: #fef7e0; color: #b06000; font-weight: 600; }
   .actions button.pause:hover { background: #feefc3; }
 
-  /* ===== BARRAS DO GANTT (AGORA DENTRO DA MESMA LINHA) ===== */
-  .gantt-cell { position: relative; min-width: 24px; padding: 0 !important; }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px; }
+  .badge-pai { background: #e8f0fe; color: #1a73e8; }
+  .badge-sub { background: #e6f4ea; color: #137333; }
+  .badge-late { background: #fce8e6; color: #d93025; }
+  .badge-paused { background: #fef7e0; color: #b06000; }
+
+  /* Barras do Gráfico */
+  .gantt-cell { position: relative; height: 32px; overflow: hidden; }
   .bar { 
-    position: absolute; top: 4px; bottom: 4px; border-radius: 3px; 
-    cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; 
+    position: absolute; top: 6px; bottom: 6px; border-radius: 3px; 
+    cursor: pointer; display: flex; align-items: center; justify-content: center; 
     font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; 
     background: #e8f0fe; border: 1px solid #1a73e8;
   }
@@ -122,31 +170,23 @@
   .modal .msg.show { display: block; }
   .modal .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-  /* ===== BADGES ===== */
-  .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px; }
-  .badge-pai { background: #e8f0fe; color: #1a73e8; }
-  .badge-sub { background: #e6f4ea; color: #137333; }
-  .badge-late { background: #fce8e6; color: #d93025; }
-  .badge-paused { background: #fef7e0; color: #b06000; }
-  
   .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; margin-top: 10px; color: #555; }
   .legend span { display: flex; align-items: center; gap: 5px; }
   .legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
   
   .backup-panel { background: #fff; border-radius: 6px; padding: 12px 16px; margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,.1); font-size: 12px; color: #555; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .backup-panel strong { color: #1a3d6d; }
-  .backup-panel input[type="file"] { font-size: 12px; }
 
   @media print {
     body { background: #fff; padding: 0; }
     body::before { display: none; }
     .toolbar, .actions, .modal-overlay, .no-print, .backup-panel { display: none !important; }
-    .container { box-shadow: none; overflow: visible; border: 1px solid #ccc; }
+    .gantt-wrapper { box-shadow: none; border: 1px solid #ccc; }
+    .table-scroll { overflow: visible; }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
     table.gantt thead th { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .bar, .bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    table.gantt { font-size: 9px; }
-    h1 { font-size: 16px; }
-    tr.selected { outline: none !important; background: transparent !important; }
   }
 </style>
 </head>
@@ -158,7 +198,7 @@
 </div>
 
 <div class="header">
-  <img src="logo.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
+  <img src="logo-gold.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
   <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
 </div>
 
@@ -175,11 +215,32 @@
   <span id="backupInfo" style="color:#888;margin-left:auto;">Conectando...</span>
 </div>
 
-<div class="container">
-  <table class="gantt" id="ganttTable">
-    <thead id="ganttHead"></thead>
-    <tbody id="ganttBody"></tbody>
-  </table>
+<!-- O NOVO LAYOUT: Duas tabelas lado a lado -->
+<div class="gantt-wrapper">
+  <!-- Tabela da Esquerda (Dados Fixos) -->
+  <div class="table-fixed">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-task">Tarefa / Serviço</th>
+          <th class="col-info">Início</th>
+          <th class="col-info">Entrega</th>
+          <th class="col-info">Dur.</th>
+          <th class="col-info">Prog.</th>
+          <th class="col-info no-print">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyFixed"></tbody>
+    </table>
+  </div>
+
+  <!-- Tabela da Direita (Gráfico) -->
+  <div class="table-scroll">
+    <table id="tableScroll">
+      <thead id="theadScroll"></thead>
+      <tbody id="tbodyScroll"></tbody>
+    </table>
+  </div>
 </div>
 
 <div class="legend no-print">
@@ -329,7 +390,10 @@ function calcularProgresso(tarefa) {
 }
 
 /* ========== RENDER ========== */
-function render() { renderHead(); renderBody(); }
+function render() { 
+  renderHead(); 
+  renderBody(); 
+}
 
 function renderHead() {
   let min = null, max = null;
@@ -350,17 +414,8 @@ function renderHead() {
   
   const monthRow = [], dayRow = [];
   let lastMonth = null;
-  
-  monthRow.push(`<th class="col-task" rowspan="2">Tarefa / Serviço</th>`);
-  monthRow.push(`<th class="col-info" rowspan="2">Início</th>`);
-  monthRow.push(`<th class="col-info" rowspan="2">Entrega</th>`);
-  monthRow.push(`<th class="col-info" rowspan="2">Dur.</th>`);
-  monthRow.push(`<th class="col-info" rowspan="2">Prog.</th>`);
-  
-  // Mudança estrutural: Agora o gráfico é uma única coluna gigante ao lado dos dados
-  // e não mais uma linha extra embaixo.
-  
   let mStart = 0; const monthGroups = [];
+  
   for (let i = 0; i < totalDays; i++) {
     const d = addDays(min, i);
     const key = d.getFullYear() + '-' + d.getMonth();
@@ -371,10 +426,8 @@ function renderHead() {
   }
   monthGroups.push({ label: monthLabel(addDays(min, mStart)), span: totalDays - mStart });
   
-  // Adiciona o cabeçalho dos meses cobrindo a área do gráfico
-  monthRow.push(`<th colspan="${totalDays}" style="text-align:center;">Cronograma</th>`);
+  monthGroups.forEach(g => monthRow.push(`<th colspan="${g.span}" style="text-align:center;">${g.label}</th>`));
   
-  // Adiciona o cabeçalho dos dias
   for (let i = 0; i < totalDays; i++) {
     const d = addDays(min, i); const dow = d.getDay();
     const wd = ['D','S','T','Q','Q','S','S'][dow];
@@ -384,12 +437,7 @@ function renderHead() {
     dayRow.push(`<th style="${style}" title="${fmtDate(d)}">${d.getDate()}<br><span style="font-size:8px;">${wd}</span></th>`);
   }
   
-  // Cabeçalho da coluna de ações por último
-  monthRow.splice(5, 0, `<th class="col-info no-print" rowspan="2">Ações</th>`);
-  
-  // Como os meses não batem com os dias exatos se separarmos as colunas,
-  // faremos um cabeçalho de mês simplificado para os dias.
-  document.getElementById('ganttHead').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
+  document.getElementById('theadScroll').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
 }
 
 function monthLabel(d) {
@@ -398,8 +446,10 @@ function monthLabel(d) {
 }
 
 function renderBody() {
-  const body = document.getElementById('ganttBody');
-  const rows = [];
+  const tbodyFixed = document.getElementById('tbodyFixed');
+  const tbodyScroll = document.getElementById('tbodyScroll');
+  const rowsFixed = [];
+  const rowsScroll = [];
   const { min, totalDays } = window.__range;
   
   function renderRow(t, level) {
@@ -421,9 +471,13 @@ function renderBody() {
     else if (atrasada) barClass += 'overdue ';
     else if (pausada) barClass += 'paused ';
 
-    const tr = document.createElement('tr');
-    tr.dataset.id = t.id;
-    if (selectedTaskId === t.id) tr.classList.add('selected');
+    const isSelected = selectedTaskId === t.id ? 'selected' : '';
+
+    // ----- Tabela Esquerda (Texto) -----
+    const trFixed = document.createElement('tr');
+    trFixed.className = `row-tarefa ${isSelected}`;
+    trFixed.dataset.id = t.id;
+    
     const indentPx = level * 20;
     const arrow = hasChildren
       ? `<span style="cursor:pointer;font-size:10px;width:14px;display:inline-block;" onclick="event.stopPropagation();toggleExpand('${t.id}')">${isExpanded ? '▼' : '▶'}</span>`
@@ -432,7 +486,7 @@ function renderBody() {
     const lateBadge = atrasada ? `<span class="badge badge-late">ATRASADA</span>` : '';
     const pausedBadge = pausada ? `<span class="badge badge-paused">PAUSADA</span>` : '';
 
-    tr.innerHTML = `
+    trFixed.innerHTML = `
       <td class="col-task">
         <div class="task-name" style="padding-left:${indentPx}px;">
           ${arrow}
@@ -454,15 +508,17 @@ function renderBody() {
         </div>
       </td>
     `;
+    rowsFixed.push(trFixed);
 
-    // AQUI ESTÁ A MÁGICA: Adiciona a célula do gráfico NA MESMA LINHA
-    const ganttTd = document.createElement('td');
-    ganttTd.colSpan = totalDays;
-    ganttTd.className = 'gantt-cell';
-    ganttTd.style.position = 'relative';
-    ganttTd.style.height = '30px';
-    ganttTd.style.minWidth = (totalDays * dayWidth) + 'px';
+    // ----- Tabela Direita (Gráfico) -----
+    const trScroll = document.createElement('tr');
+    trScroll.className = `row-tarefa ${isSelected}`;
+    trScroll.dataset.id = t.id;
 
+    const tdGantt = document.createElement('td');
+    tdGantt.colSpan = totalDays;
+    tdGantt.className = 'gantt-cell';
+    
     const bar = document.createElement('div');
     bar.className = barClass;
     bar.style.left = (offset * dayWidth) + 'px';
@@ -470,7 +526,7 @@ function renderBody() {
     bar.title = `${t.name}\n${formatBR(t.start)} → ${formatBR(t.end)} (${dur}d)\nProgresso: ${progresso}%`;
     bar.innerHTML = `<div class="bar-fill" style="width:${progresso}%"></div><span class="bar-text">${span >= 3 && progresso > 0 ? progresso + '%' : ''}</span>`;
     bar.onclick = () => editTask(t.id);
-    ganttTd.appendChild(bar);
+    tdGantt.appendChild(bar);
 
     const hoje = new Date(new Date().toDateString());
     if (hoje >= min && hoje <= addDays(min, totalDays-1)) {
@@ -478,18 +534,21 @@ function renderBody() {
       const line = document.createElement('div');
       line.className = 'today-line';
       line.style.left = (todayOffset * dayWidth + dayWidth/2) + 'px';
-      ganttTd.appendChild(line);
+      tdGantt.appendChild(line);
     }
 
-    // Adiciona o gráfico na mesma linha
-    tr.appendChild(ganttTd);
-    rows.push(tr);
+    trScroll.appendChild(tdGantt);
+    rowsScroll.push(trScroll);
     
     if (hasChildren && isExpanded) children.forEach(c => renderRow(c, level + 1));
   }
+  
   getRoots().forEach(r => renderRow(r, 0));
-  body.innerHTML = '';
-  rows.forEach(r => body.appendChild(r));
+  
+  tbodyFixed.innerHTML = '';
+  tbodyScroll.innerHTML = '';
+  rowsFixed.forEach(r => tbodyFixed.appendChild(r));
+  rowsScroll.forEach(r => tbodyScroll.appendChild(r));
 }
 
 function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -502,172 +561,4 @@ function expandAll(v) { data.forEach(t => expanded[t.id] = v); render(); }
 function openTaskModal(task, parentId) {
   const modal = document.getElementById('taskModal');
   document.getElementById('taskModalTitle').textContent = task ? 'Editar Tarefa' : (parentId ? 'Nova Subtarefa' : 'Nova Tarefa');
-  document.getElementById('taskId').value = task ? task.id : '';
-  document.getElementById('taskParentId').value = parentId || '';
-  document.getElementById('taskName').value = task ? task.name : '';
-  document.getElementById('taskOwner').value = task ? (task.owner||'') : '';
-  document.getElementById('taskStart').value = task ? task.start : todayStr();
-  document.getElementById('taskEnd').value = task ? task.end : fmtDate(addDays(new Date(), 3));
-  document.getElementById('taskStatus').value = task ? (task.status||'pendente') : 'pendente';
-  document.getElementById('taskNotes').value = task ? (task.notes||'') : '';
-  document.getElementById('taskMsg').classList.remove('show');
-  modal.classList.add('active');
-}
-function closeTaskModal() { document.getElementById('taskModal').classList.remove('active'); }
-function addSubtask(parentId) { openTaskModal(null, parentId); }
-function editTask(id) { const t = data.find(x => x.id === id); if (t) openTaskModal(t, t.parentId); }
-
-/* ========== SALVAR TAREFA NA NUVEM ========== */
-async function saveTask() {
-  const id = document.getElementById('taskId').value;
-  const parentId = document.getElementById('taskParentId').value || null;
-  const name = document.getElementById('taskName').value.trim();
-  const owner = document.getElementById('taskOwner').value.trim();
-  const start = document.getElementById('taskStart').value;
-  const end = document.getElementById('taskEnd').value;
-  const status = document.getElementById('taskStatus').value;
-  const notes = document.getElementById('taskNotes').value.trim();
-  const msg = document.getElementById('taskMsg');
-
-  if (!name) { msg.textContent = 'Informe o nome da tarefa.'; msg.classList.add('show'); return; }
-  if (!start || !end) { msg.textContent = 'Informe as datas de início e entrega.'; msg.classList.add('show'); return; }
-  if (parseDate(end) < parseDate(start)) { msg.textContent = 'A data de entrega não pode ser anterior ao início.'; msg.classList.add('show'); return; }
-  
-  if (id) {
-    const original = data.find(x => x.id === id);
-    const dateChanged = original && (original.start !== start || original.end !== end);
-    if (dateChanged) {
-      pendingEdit = { id, parentId, name, owner, start, end, status, notes };
-      closeTaskModal();
-      openJustify();
-      return;
-    }
-  }
-  await applyTask({ id, parentId, name, owner, start, end, status, notes });
-}
-
-async function applyTask(p) {
-  const payload = {
-    id: p.id || uid(),
-    parent_id: p.parentId,
-    name: p.name,
-    owner: p.owner || '',
-    start_date: p.start,
-    end_date: p.end,
-    status: p.status,
-    notes: p.notes || '',
-    justificativas: p.justificativas || []
-  };
-
-  try {
-    const { error } = await _supabase.from('tarefas').upsert(payload);
-    if (error) throw error;
-
-    if (p.id) {
-      const t = data.find(x => x.id === p.id);
-      if (t) Object.assign(t, p);
-    } else {
-      data.push({ id: payload.id, parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, status: p.status, notes: p.notes, justificativas: [] });
-      if (p.parentId) expanded[p.parentId] = true;
-    }
-    closeTaskModal(); 
-    render();
-    updateBackupInfo();
-  } catch(e) {
-    console.error(e);
-    alert('Erro ao salvar a tarefa no banco de dados.');
-  }
-}
-
-/* ========== JUSTIFICATIVA ========== */
-function openJustify() {
-  document.getElementById('justifyText').value = '';
-  document.getElementById('justifyMsg').classList.remove('show');
-  document.getElementById('justifyModal').classList.add('active');
-}
-function cancelJustify() {
-  pendingEdit = null;
-  document.getElementById('justifyModal').classList.remove('active');
-}
-async function confirmJustify() {
-  const txt = document.getElementById('justifyText').value.trim();
-  const msg = document.getElementById('justifyMsg');
-  if (txt.length < 5) { msg.textContent = 'Informe uma justificativa com pelo menos 5 caracteres.'; msg.classList.add('show'); return; }
-  const p = pendingEdit;
-  if (!p) { cancelJustify(); return; }
-  const original = data.find(x => x.id === p.id);
-  
-  const log = (original.justificativas || []);
-  log.push({ data: new Date().toISOString(), de: { inicio: original.start, entrega: original.end }, para: { inicio: p.start, entrega: p.end }, motivo: txt });
-  p.justificativas = log;
-  
-  document.getElementById('justifyModal').classList.remove('active');
-  pendingEdit = null;
-  await applyTask(p);
-}
-
-/* ========== EXCLUIR DA NUVEM ========== */
-async function deleteTask(id) {
-  const t = data.find(x => x.id === id); if (!t) return;
-  const children = getChildren(id);
-  const hasChildren = children.length > 0;
-  
-  if (!hasChildren) {
-    if (!confirm(`Excluir a tarefa "${t.name}"?\n\nEsta ação não pode ser desfeita.`)) return;
-    await removeTaskAndSubtree(id); return;
-  }
-  
-  const msg = `A tarefa "${t.name}" possui ${children.length} subtarefa(s).\n\nOK = EXCLUIR TUDO (tarefa + subtarefas).\nCancelar = escolher outra opção.`;
-  if (confirm(msg)) { await removeTaskAndSubtree(id); return; }
-  
-  const mover = confirm(`Deseja MANTER as subtarefas de "${t.name}"?\n\nOK = manter subtarefas (promovidas a tarefas principais)\nCancelar = não excluir nada`);
-  if (mover) {
-    try {
-      for (let c of children) {
-        await _supabase.from('tarefas').update({ parent_id: null }).eq('id', c.id);
-      }
-      await _supabase.from('tarefas').delete().eq('id', id);
-      children.forEach(c => { c.parentId = null; });
-      data = data.filter(x => x.id !== id);
-      render();
-      updateBackupInfo();
-    } catch(e) { alert('Erro ao excluir.'); }
-  }
-}
-
-async function removeTaskAndSubtree(id) {
-  const ids = getSubtree(id).map(x => x.id);
-  try {
-    const { error } = await _supabase.from('tarefas').delete().in('id', ids);
-    if (error) throw error;
-    data = data.filter(x => !ids.includes(x.id));
-    render();
-    updateBackupInfo();
-  } catch(e) { alert('Erro ao excluir do banco de dados.'); }
-}
-
-/* ========== SELEÇÃO + DELETE ========== */
-document.addEventListener('click', e => {
-  const tr = e.target.closest('tr[data-id]');
-  if (tr) {
-    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
-    tr.classList.add('selected');
-    selectedTaskId = tr.dataset.id;
-  } else if (!e.target.closest('.modal-overlay') && !e.target.closest('button')) {
-    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
-    selectedTaskId = null;
-  }
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Delete' && selectedTaskId) { deleteTask(selectedTaskId); selectedTaskId = null; }
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
-    pendingEdit = null;
-  }
-});
-
-/* ========== INIT ========== */
-load();
-</script>
-</body>
-</html>
+  document.getElementById('taskId').
