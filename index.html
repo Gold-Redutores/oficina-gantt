@@ -7,113 +7,71 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #222; padding: 20px; background-color: #f0f2f5; position: relative; min-height: 100vh; }
+  body::before { content: ""; position: fixed; inset: 0; background-image: url('fundo.png'); background-size: cover; background-position: center; opacity: 0.08; z-index: -1; pointer-events: none; }
   
-  /* ===== PLANO DE FUNDO ===== */
-  body { 
-    font-family: 'Segoe UI', Tahoma, sans-serif; 
-    color: #222; 
-    padding: 20px; 
-    position: relative;
-    min-height: 100vh;
-    background-color: #f0f2f5;
-  }
-  
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-image: url('fundo.png'); 
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0.08;
-    z-index: -1;
-    pointer-events: none;
-  }
-
-  /* ===== TELA DE CARREGAMENTO ===== */
-  #loadingOverlay {
-    position: fixed; inset: 0; background: rgba(255,255,255,0.9);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    z-index: 9999; font-size: 18px; color: #1a73e8; font-weight: bold;
-  }
-  .spinner {
-    border: 4px solid #f3f3f3; border-top: 4px solid #1a73e8;
-    border-radius: 50%; width: 40px; height: 40px;
-    animation: spin 1s linear infinite; margin-bottom: 15px;
-  }
+  #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-size: 18px; color: #1a73e8; font-weight: bold; }
+  .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a73e8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-  /* ===== CABEÇALHO ===== */
   .header { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
   .header img { height: 50px; object-fit: contain; }
   .header h1 { font-size: 22px; color: #1a3d6d; margin: 0; }
-
-  /* ===== BOTÕES ===== */
   .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
-  button { 
-    padding: 8px 14px; border: none; border-radius: 4px; 
-    background: #1a73e8; color: #fff; cursor: pointer; 
-    font-size: 13px; transition: .2s; 
-  }
+  button { padding: 8px 14px; border: none; border-radius: 4px; background: #1a73e8; color: #fff; cursor: pointer; font-size: 13px; transition: .2s; }
   button:hover { background: #1558b0; }
   button.secondary { background: #5f6368; } button.secondary:hover { background: #3c4043; }
   button.success { background: #188038; } button.success:hover { background: #0d652d; }
 
-  /* ===== TABELA ===== */
-    .container { 
-    background: #fff; 
-    border-radius: 6px; 
-    box-shadow: 0 1px 4px rgba(0,0,0,.15); 
-    overflow: auto; /* A barra de rolagem agora é do container inteiro */
-    position: relative; 
-    max-height: 80vh; /* Opcional: adiciona rolagem vertical se tiver muitas tarefas */
-  }
+  .gantt-layout { display: flex; background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.15); overflow: hidden; width: 100%; }
+  .tabela-fixa { flex-shrink: 0; border-right: 2px solid #1a73e8; z-index: 10; }
+  .tabela-fixa table { border-collapse: collapse; }
+  .tabela-fixa th, .tabela-fixa td { border: 1px solid #e0e0e0; padding: 4px 6px; height: 32px; font-size: 12px; white-space: nowrap; }
+  .tabela-fixa thead th { background: #1a73e8; color: #fff; height: 50px; text-align: center; font-size: 11px; }
+  .col-task { width: 320px; text-align: left; }
+  .col-info { width: 80px; text-align: center; }
+  .col-act { width: 100px; text-align: center; }
 
-  /* Fixa as colunas de texto no lado esquerdo para não rolarem junto com o gráfico */
-  table.gantt th.col-task, table.gantt td.col-task { position: sticky; left: 0; z-index: 6; background: #fff; }
-  table.gantt th.col-task { z-index: 10; background: #1a73e8; }
-  
-  table.gantt th.col-info, table.gantt td.col-info { position: sticky; z-index: 6; background: #fff; }
-  table.gantt th.col-info { z-index: 10; background: #1a73e8; }
-  
-  /* Posiciona as colunas de texto fixas de acordo com a largura */
-  table.gantt .col-task { min-width: 300px; left: 0; }
-  table.gantt .col-info:nth-child(2) { left: 300px; }
-  table.gantt .col-info:nth-child(3) { left: 390px; }
-  table.gantt .col-info:nth-child(4) { left: 480px; }
-  table.gantt .col-info:nth-child(5) { left: 570px; }
-  table.gantt .col-info:nth-child(6) { left: 660px; }
+  .tabela-grafico { overflow-x: auto; flex-grow: 1; }
+  .tabela-grafico table { border-collapse: collapse; }
+  .tabela-grafico th, .tabela-grafico td { border: 1px solid #e0e0e0; padding: 0; height: 32px; background: #fff; }
+  .tabela-grafico thead th { background: #1a73e8; color: #fff; height: 25px; text-align: center; font-size: 11px; }
 
-  
-  /* ===== BARRAS DO GANTT (AGORA DENTRO DA MESMA LINHA) ===== */
-  .gantt-cell { position: relative; min-width: 24px; padding: 0 !important; }
-  .bar { 
-    position: absolute; top: 4px; bottom: 4px; border-radius: 3px; 
-    cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; 
-    font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; 
-    background: #e8f0fe; border: 1px solid #1a73e8;
-  }
+  .tabela-fixa tbody tr:hover, .tabela-grafico tbody tr:hover { background: #f5f9ff; }
+  .tabela-fixa tbody tr.selected, .tabela-grafico tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
+
+  .task-name { display: flex; align-items: center; gap: 6px; }
+  .tarefa-pai { font-weight: 600; color: #1a3d6d; }
+  .subtask-name { color: #444; }
+  .actions { display: flex; gap: 4px; justify-content: center; }
+  .actions button { padding: 3px 7px; font-size: 11px; background: #e8f0fe; color: #1a73e8; }
+  .actions button:hover { background: #d2e3fc; }
+  .actions button.del { background: #fce8e6; color: #d93025; font-weight: 600; }
+  .actions button.del:hover { background: #f6c7c2; }
+  .actions button.pause { background: #fef7e0; color: #b06000; font-weight: 600; }
+  .actions button.pause:hover { background: #feefc3; }
+
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px; }
+  .badge-pai { background: #e8f0fe; color: #1a73e8; }
+  .badge-sub { background: #e6f4ea; color: #137333; }
+  .badge-late { background: #fce8e6; color: #d93025; }
+  .badge-paused { background: #fef7e0; color: #b06000; }
+
+  .gantt-cell { position: relative; overflow: hidden; }
+  .bar { position: absolute; top: 6px; bottom: 6px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; background: #e8f0fe; border: 1px solid #1a73e8; }
   .bar:hover { filter: brightness(0.95); }
-  
   .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #1a73e8; z-index: 1; }
   .bar-text { position: relative; z-index: 2; color: #1a3d6d; mix-blend-mode: difference; }
-
   .bar.subtask { border-color: #34a853; background: #e6f4ea; }
   .bar.subtask .bar-fill { background: #34a853; }
-  
   .bar.done { border-color: #9aa0a6; background: #f1f3f4; }
   .bar.done .bar-fill { background: #9aa0a6; }
-  
   .bar.overdue { border-color: #d93025; background: #fce8e6; }
   .bar.overdue .bar-fill { background: #d93025; }
-
   .bar.paused { border: 2px dashed #d93025; background: repeating-linear-gradient(45deg, #fce8e6, #fce8e6 5px, #fff 5px, #fff 10px); }
   .bar.paused .bar-fill { background: repeating-linear-gradient(45deg, #d93025, #d93025 5px, #fce8e6 5px, #fce8e6 10px); }
-
   .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #ea4335; z-index: 4; pointer-events: none; }
 
-  /* ===== MODAIS ===== */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 100; }
   .modal-overlay.active { display: flex; }
   .modal { background: #fff; border-radius: 8px; padding: 20px; width: 500px; max-width: 95vw; max-height: 90vh; overflow: auto; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
@@ -126,43 +84,19 @@
   .modal .msg.show { display: block; }
   .modal .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-  /* ===== BADGES ===== */
-  .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px; }
-  .badge-pai { background: #e8f0fe; color: #1a73e8; }
-  .badge-sub { background: #e6f4ea; color: #137333; }
-  .badge-late { background: #fce8e6; color: #d93025; }
-  .badge-paused { background: #fef7e0; color: #b06000; }
-  
   .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; margin-top: 10px; color: #555; }
   .legend span { display: flex; align-items: center; gap: 5px; }
   .legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
-  
   .backup-panel { background: #fff; border-radius: 6px; padding: 12px 16px; margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,.1); font-size: 12px; color: #555; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .backup-panel strong { color: #1a3d6d; }
-  .backup-panel input[type="file"] { font-size: 12px; }
-
-  @media print {
-    body { background: #fff; padding: 0; }
-    body::before { display: none; }
-    .toolbar, .actions, .modal-overlay, .no-print, .backup-panel { display: none !important; }
-    .container { box-shadow: none; overflow: visible; border: 1px solid #ccc; }
-    table.gantt thead th { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .bar, .bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    table.gantt { font-size: 9px; }
-    h1 { font-size: 16px; }
-    tr.selected { outline: none !important; background: transparent !important; }
-  }
 </style>
 </head>
 <body>
 
-<div id="loadingOverlay">
-  <div class="spinner"></div>
-  Carregando dados do servidor...
-</div>
+<div id="loadingOverlay"><div class="spinner"></div>Carregando dados do servidor...</div>
 
 <div class="header">
-  <img src="logo-gold.png" alt="Gold Soluções e Serviços" onerror="this.style.display='none';">
+  <img src="logo-gold.png" alt="Gold" onerror="this.style.display='none';">
   <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
 </div>
 
@@ -179,11 +113,28 @@
   <span id="backupInfo" style="color:#888;margin-left:auto;">Conectando...</span>
 </div>
 
-<div class="container">
-  <table class="gantt" id="ganttTable">
-    <thead id="ganttHead"></thead>
-    <tbody id="ganttBody"></tbody>
-  </table>
+<div class="gantt-layout">
+  <div class="tabela-fixa">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-task">Tarefa / Serviço</th>
+          <th class="col-info">Início</th>
+          <th class="col-info">Entrega</th>
+          <th class="col-info">Dur.</th>
+          <th class="col-info">Prog.</th>
+          <th class="col-act no-print">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyFixed"></tbody>
+    </table>
+  </div>
+  <div class="tabela-grafico">
+    <table>
+      <thead id="theadScroll"></thead>
+      <tbody id="tbodyScroll"></tbody>
+    </table>
+  </div>
 </div>
 
 <div class="legend no-print">
@@ -195,28 +146,23 @@
   <span><i style="background:#ea4335;width:3px"></i> Hoje</span>
 </div>
 
-<!-- MODAL TAREFA -->
 <div class="modal-overlay" id="taskModal">
   <div class="modal">
     <h2 id="taskModalTitle">Nova Tarefa</h2>
-    <input type="hidden" id="taskId">
-    <input type="hidden" id="taskParentId">
-    <label>Nome *</label>
-    <input type="text" id="taskName" placeholder="Ex.: Troca de óleo">
-    <label>Responsável</label>
-    <input type="text" id="taskOwner" placeholder="Ex.: João Mecânico">
+    <input type="hidden" id="taskId"><input type="hidden" id="taskParentId">
+    <label>Nome *</label><input type="text" id="taskName">
+    <label>Responsável</label><input type="text" id="taskOwner">
     <div class="row">
       <div><label>Data de Início *</label><input type="date" id="taskStart"></div>
       <div><label>Data de Entrega *</label><input type="date" id="taskEnd"></div>
     </div>
     <label>Status Manual</label>
     <select id="taskStatus">
-      <option value="pendente">Pendente (Não iniciada)</option>
-      <option value="andamento">Em Andamento (Automático)</option>
+      <option value="pendente">Pendente</option>
+      <option value="andamento">Em Andamento</option>
       <option value="concluida">Concluída</option>
     </select>
-    <label>Observações</label>
-    <textarea id="taskNotes" placeholder="Detalhes do serviço..."></textarea>
+    <label>Observações</label><textarea id="taskNotes"></textarea>
     <div class="msg" id="taskMsg"></div>
     <div class="footer">
       <button class="secondary" onclick="closeTaskModal()">Cancelar</button>
@@ -225,16 +171,11 @@
   </div>
 </div>
 
-<!-- MODAL JUSTIFICATIVA -->
 <div class="modal-overlay" id="justifyModal">
   <div class="modal">
     <h2>⚠️ Alteração de Prazo</h2>
-    <p style="font-size:12px;color:#555;margin-bottom:10px;">
-      A alteração de datas exige justificativa. Os prazos poderão ser editados,
-      mas ficará registrado o motivo.
-    </p>
-    <label>Motivo da alteração *</label>
-    <textarea id="justifyText" placeholder="Descreva o motivo da alteração de datas..."></textarea>
+    <p style="font-size:12px;color:#555;margin-bottom:10px;">A alteração de datas exige justificativa.</p>
+    <label>Motivo *</label><textarea id="justifyText"></textarea>
     <div class="msg" id="justifyMsg"></div>
     <div class="footer">
       <button class="secondary" onclick="cancelJustify()">Cancelar</button>
@@ -242,19 +183,12 @@
     </div>
   </div>
 </div>
-
 <script>
-/* ========== CONEXÃO COM O SUPABASE ========== */
 const SUPABASE_URL = 'https://wqtzhhiocmdxiipcsbdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndxdHpoaGlvY21keGlpcGNzYmRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDk3MDUsImV4cCI6MjEwODc4NTcwNX0.s2g9KplJwoxDqlB4eSCIIPN8TK09IEzb1-dgHL9_pXI';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let data = [];
-let expanded = {};
-let dayWidth = 26;
-let pendingEdit = null;
-let selectedTaskId = null;
-
+let data = [], expanded = {}, dayWidth = 26, pendingEdit = null, selectedTaskId = null;
 function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2,7); }
 
 async function load() {
@@ -265,74 +199,34 @@ async function load() {
       id: t.id, parentId: t.parent_id, name: t.name, owner: t.owner,
       start: t.start_date, end: t.end_date, status: t.status, notes: t.notes, justificativas: t.justificativas || []
     }));
-  } catch(e) { 
-    console.error('Erro ao carregar:', e);
-    data = []; 
-  }
-  updateBackupInfo();
+  } catch(e) { data = []; }
+  document.getElementById('backupInfo').textContent = `${data.length} tarefa(s) sincronizada(s) na nuvem`;
   document.getElementById('loadingOverlay').style.display = 'none';
   render();
 }
 
-function updateBackupInfo() {
-  const el = document.getElementById('backupInfo');
-  if (el) el.textContent = `${data.length} tarefa(s) sincronizada(s) na nuvem`;
-}
-
-function exportBackup() {
-  const payload = { app: 'oficina-gantt', version: 3, exportedAt: new Date().toISOString(), tarefas: data };
-  const json = JSON.stringify(payload, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const agora = new Date();
-  const stamp = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}_${String(agora.getHours()).padStart(2,'0')}${String(agora.getMinutes()).padStart(2,'0')}`;
-  a.href = url; a.download = `backup_oficina_${stamp}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-/* ========== DATAS ========== */
 function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
-function fmtDate(d) { const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
+function fmtDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function addDays(d,n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 function daysBetween(a,b){ return Math.round((b - a) / 86400000); }
 function todayStr(){ return fmtDate(new Date()); }
 function formatBR(iso) { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
+function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-/* ========== HIERARQUIA ========== */
 function getChildren(id) { return data.filter(t => t.parentId === id); }
 function getRoots() { return data.filter(t => !t.parentId); }
 function getSubtree(id) { const out = [data.find(t => t.id === id)]; getChildren(id).forEach(c => out.push(...getSubtree(c.id))); return out; }
 
-async function togglePause(id) {
-  const t = data.find(x => x.id === id);
-  if (!t) return;
-  if (t.status === 'concluida') { alert('Tarefas concluídas não podem ser pausadas.'); return; }
-  const novoStatus = t.status === 'pausada' ? 'andamento' : 'pausada';
-  try {
-    const { error } = await _supabase.from('tarefas').update({ status: novoStatus }).eq('id', id);
-    if (error) throw error;
-    t.status = novoStatus;
-    render();
-  } catch(e) { alert('Erro ao pausar/retomar.'); }
-}
-
-function calcularProgresso(tarefa) {
-  if (tarefa.status === 'concluida') return 100;
-  if (tarefa.status === 'pendente') return 0;
+function calcularProgresso(t) {
+  if (t.status === 'concluida') return 100;
+  if (t.status === 'pendente') return 0;
   const hoje = new Date(new Date().toDateString());
-  const inicio = parseDate(tarefa.start);
-  const fim = parseDate(tarefa.end);
+  const inicio = parseDate(t.start), fim = parseDate(t.end);
   if (hoje < inicio) return 0;
   if (hoje >= fim) return 100;
-  const totalDias = daysBetween(inicio, fim) + 1;
-  const diasPassados = daysBetween(inicio, hoje) + 1;
-  let pct = Math.round((diasPassados / totalDias) * 100);
-  return Math.min(100, Math.max(0, pct));
+  return Math.min(100, Math.max(0, Math.round((daysBetween(inicio, hoje) + 1) / (daysBetween(inicio, fim) + 1) * 100)));
 }
 
-/* ========== RENDER ========== */
 function render() { renderHead(); renderBody(); }
 
 function renderHead() {
@@ -347,168 +241,93 @@ function renderHead() {
   if (!min) min = addDays(hoje, -3);
   if (!max) max = addDays(hoje, 10);
   min = addDays(min, -3); max = addDays(max, 5);
-  if (hoje < min) min = addDays(hoje, -2);
-  if (hoje > max) max = addDays(hoje, 3);
   const totalDays = daysBetween(min, max) + 1;
-  window.__range = { min, max, totalDays };
+  window.__range = { min, totalDays };
   
   const monthRow = [], dayRow = [];
-  let lastMonth = null;
+  let lastMonth = null, mStart = 0, monthGroups = [];
   
-  monthRow.push(`<th class="col-task" rowspan="2">Tarefa / Serviço</th>`);
-  monthRow.push(`<th class="col-info" rowspan="2">Início</th>`);
-  monthRow.push(`<th class="col-info" rowspan="2">Entrega</th>`);
-  monthRow.push(`<th class="col-info" rowspan="2">Dur.</th>`);
-  monthRow.push(`<th class="col-info" rowspan="2">Prog.</th>`);
-  
-  // Mudança estrutural: Agora o gráfico é uma única coluna gigante ao lado dos dados
-  // e não mais uma linha extra embaixo.
-  
-  let mStart = 0; const monthGroups = [];
   for (let i = 0; i < totalDays; i++) {
-    const d = addDays(min, i);
-    const key = d.getFullYear() + '-' + d.getMonth();
+    const d = addDays(min, i), key = d.getFullYear() + '-' + d.getMonth();
     if (key !== lastMonth) {
       if (lastMonth !== null) monthGroups.push({ label: monthLabel(addDays(min, mStart)), span: i - mStart });
       mStart = i; lastMonth = key;
     }
   }
   monthGroups.push({ label: monthLabel(addDays(min, mStart)), span: totalDays - mStart });
+  monthGroups.forEach(g => monthRow.push(`<th colspan="${g.span}" style="text-align:center;">${g.label}</th>`));
   
-  // Adiciona o cabeçalho dos meses cobrindo a área do gráfico
-  monthRow.push(`<th colspan="${totalDays}" style="text-align:center;">Cronograma</th>`);
-  
-  // Adiciona o cabeçalho dos dias
   for (let i = 0; i < totalDays; i++) {
-    const d = addDays(min, i); const dow = d.getDay();
-    const wd = ['D','S','T','Q','Q','S','S'][dow];
-    const isWeekend = dow === 0 || dow === 6;
-    const isToday = fmtDate(d) === todayStr();
-    const style = `min-width:${dayWidth}px;width:${dayWidth}px;` + (isWeekend ? 'background:#eef1f6;' : '') + (isToday ? 'background:#ea4335;color:#fff;' : '');
-    dayRow.push(`<th style="${style}" title="${fmtDate(d)}">${d.getDate()}<br><span style="font-size:8px;">${wd}</span></th>`);
+    const d = addDays(min, i), isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    const style = `min-width:${dayWidth}px;width:${dayWidth}px;` + (isWeekend ? 'background:#eef1f6;' : '');
+    dayRow.push(`<th style="${style}">${d.getDate()}<br><span style="font-size:8px;">${['D','S','T','Q','Q','S','S'][d.getDay()]}</span></th>`);
   }
-  
-  // Cabeçalho da coluna de ações por último
-  monthRow.splice(5, 0, `<th class="col-info no-print" rowspan="2">Ações</th>`);
-  
-  // Como os meses não batem com os dias exatos se separarmos as colunas,
-  // faremos um cabeçalho de mês simplificado para os dias.
-  document.getElementById('ganttHead').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
+  document.getElementById('theadScroll').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
 }
-
-function monthLabel(d) {
-  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  return `${meses[d.getMonth()]} / ${d.getFullYear()}`;
-}
-
-function renderBody() {
-  const body = document.getElementById('ganttBody');
-  const rows = [];
+function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()]} / ${d.getFullYear()}`; }
+ function renderBody() {
+  const tbodyFixed = document.getElementById('tbodyFixed'), tbodyScroll = document.getElementById('tbodyScroll');
+  const rowsFixed = [], rowsScroll = [];
   const { min, totalDays } = window.__range;
   
   function renderRow(t, level) {
-    const children = getChildren(t.id);
-    const hasChildren = children.length > 0;
-    const isExpanded = expanded[t.id] !== false && hasChildren;
-    const start = parseDate(t.start), end = parseDate(t.end);
-    const offset = daysBetween(min, start);
-    const span = daysBetween(start, end) + 1;
-    const dur = span;
+    const hasChildren = getChildren(t.id).length > 0, isExpanded = expanded[t.id] !== false && hasChildren;
+    const offset = daysBetween(min, parseDate(t.start)), span = daysBetween(parseDate(t.start), parseDate(t.end)) + 1;
+    const pct = calcularProgresso(t), concluida = t.status === 'concluida' || pct >= 100;
+    const atrasada = !concluida && parseDate(t.end) < new Date(new Date().toDateString()), pausada = t.status === 'pausada';
+    let barClass = 'bar ' + (level > 0 ? 'subtask ' : '') + (concluida ? 'done ' : '') + (atrasada ? 'overdue ' : '') + (pausada ? 'paused ' : '');
+    const isSelected = selectedTaskId === t.id ? 'selected' : '';
+
+    const trF = document.createElement('tr'); trF.className = `row-tarefa ${isSelected}`; trF.dataset.id = t.id;
+    trF.innerHTML = `
+      <td class="col-task"><div class="task-name" style="padding-left:${level * 20}px;">
+        ${hasChildren ? `<span style="cursor:pointer;" onclick="event.stopPropagation();toggleExpand('${t.id}')">${isExpanded ? '▼' : '▶'}</span>` : '<span style="width:14px;display:inline-block;"></span>'}
+        <span class="${level === 0 ? 'tarefa-pai' : 'subtask-name'}">${escapeHtml(t.name)}</span>
+        ${level === 0 ? '<span class="badge badge-pai">TAREFA</span>' : '<span class="badge badge-sub">SUB</span>'}
+        ${atrasada ? '<span class="badge badge-late">ATRASADA</span>' : ''}${pausada ? '<span class="badge badge-paused">PAUSADA</span>' : ''}
+        ${t.owner ? `<span style="color:#888;font-size:11px;">👤 ${escapeHtml(t.owner)}</span>` : ''}
+      </div></td>
+      <td class="col-info">${formatBR(t.start)}</td><td class="col-info">${formatBR(t.end)}</td>
+      <td class="col-info">${span}d</td><td class="col-info">${pct}%</td>
+      <td class="col-act no-print"><div class="actions">
+        ${!concluida ? `<button class="pause" onclick="event.stopPropagation();togglePause('${t.id}')">${pausada ? '▶️' : '⏸️'}</button>` : ''}
+        <button onclick="event.stopPropagation();editTask('${t.id}')">✎</button>
+        <button onclick="event.stopPropagation();addSubtask('${t.id}')">➕</button>
+        <button class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️</button>
+      </div></td>`;
+    rowsFixed.push(trF);
+
+    const trS = document.createElement('tr'); trS.className = `row-tarefa ${isSelected}`; trS.dataset.id = t.id;
+    const tdG = document.createElement('td'); tdG.colSpan = totalDays; tdG.className = 'gantt-cell';
+    tdG.innerHTML = `<div class="${barClass}" style="left:${offset * dayWidth}px;width:${span * dayWidth}px;" onclick="editTask('${t.id}')">
+      <div class="bar-fill" style="width:${pct}%"></div><span class="bar-text">${span >= 3 && pct > 0 ? pct + '%' : ''}</span>
+    </div>`;
     
-    const progresso = calcularProgresso(t);
-    const concluida = t.status === 'concluida' || progresso >= 100;
-    const atrasada = !concluida && parseDate(t.end) < new Date(new Date().toDateString());
-    const pausada = t.status === 'pausada';
-    
-    let barClass = 'bar ' + (level > 0 ? 'subtask ' : '');
-    if (concluida) barClass += 'done ';
-    else if (atrasada) barClass += 'overdue ';
-    else if (pausada) barClass += 'paused ';
-
-    const tr = document.createElement('tr');
-    tr.dataset.id = t.id;
-    if (selectedTaskId === t.id) tr.classList.add('selected');
-    const indentPx = level * 20;
-    const arrow = hasChildren
-      ? `<span style="cursor:pointer;font-size:10px;width:14px;display:inline-block;" onclick="event.stopPropagation();toggleExpand('${t.id}')">${isExpanded ? '▼' : '▶'}</span>`
-      : `<span style="width:14px;display:inline-block;"></span>`;
-    const badge = level === 0 ? `<span class="badge badge-pai">TAREFA</span>` : `<span class="badge badge-sub">SUB</span>`;
-    const lateBadge = atrasada ? `<span class="badge badge-late">ATRASADA</span>` : '';
-    const pausedBadge = pausada ? `<span class="badge badge-paused">PAUSADA</span>` : '';
-
-    tr.innerHTML = `
-      <td class="col-task">
-        <div class="task-name" style="padding-left:${indentPx}px;">
-          ${arrow}
-          <span class="${level === 0 ? 'tarefa-pai' : 'subtask-name'}">${escapeHtml(t.name)}</span>
-          ${badge}${lateBadge}${pausedBadge}
-          ${t.owner ? `<span style="color:#888;font-size:11px;margin-left:6px;">👤 ${escapeHtml(t.owner)}</span>` : ''}
-        </div>
-      </td>
-      <td class="col-info">${formatBR(t.start)}</td>
-      <td class="col-info">${formatBR(t.end)}</td>
-      <td class="col-info">${dur}d</td>
-      <td class="col-info">${progresso}%</td>
-      <td class="col-info no-print">
-        <div class="actions">
-          ${!concluida ? `<button title="${pausada ? 'Retomar Tarefa' : 'Pausar Tarefa'}" class="pause" onclick="event.stopPropagation();togglePause('${t.id}')">${pausada ? '▶️' : '⏸️'}</button>` : ''}
-          <button title="Editar" onclick="event.stopPropagation();editTask('${t.id}')">✎</button>
-          <button title="Adicionar subtarefa" onclick="event.stopPropagation();addSubtask('${t.id}')">➕</button>
-          <button title="Excluir" class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️</button>
-        </div>
-      </td>
-    `;
-
-    // Célula do gráfico na MESMA LINHA
-    const ganttTd = document.createElement('td');
-    ganttTd.colSpan = totalDays;
-    ganttTd.className = 'gantt-cell';
-    ganttTd.style.position = 'relative';
-    ganttTd.style.height = '30px';
-    ganttTd.style.minWidth = (totalDays * dayWidth) + 'px';
-    
-    // A MÁGICA ACONTECE AQUI: O corte (overflow hidden) fica SÓ na célula do gráfico!
-    ganttTd.style.overflow = 'hidden'; 
-
-    const bar = document.createElement('div');
-    bar.className = barClass;
-    bar.style.left = (offset * dayWidth) + 'px';
-    bar.style.width = (span * dayWidth) + 'px';
-    bar.title = `${t.name}\n${formatBR(t.start)} → ${formatBR(t.end)} (${dur}d)\nProgresso: ${progresso}%`;
-    bar.innerHTML = `<div class="bar-fill" style="width:${progresso}%"></div><span class="bar-text">${span >= 3 && progresso > 0 ? progresso + '%' : ''}</span>`;
-    bar.onclick = () => editTask(t.id);
-    ganttTd.appendChild(bar);
-
     const hoje = new Date(new Date().toDateString());
     if (hoje >= min && hoje <= addDays(min, totalDays-1)) {
-      const todayOffset = daysBetween(min, hoje);
-      const line = document.createElement('div');
-      line.className = 'today-line';
-      line.style.left = (todayOffset * dayWidth + dayWidth/2) + 'px';
-      ganttTd.appendChild(line);
+      tdG.innerHTML += `<div class="today-line" style="left:${daysBetween(min, hoje) * dayWidth + dayWidth/2}px"></div>`;
     }
-
-    tr.appendChild(ganttTd);
-    rows.push(tr);
-    
-    if (hasChildren && isExpanded) children.forEach(c => renderRow(c, level + 1));
+    trS.appendChild(tdG); rowsScroll.push(trS);
+    if (hasChildren && isExpanded) getChildren(t.id).forEach(c => renderRow(c, level + 1));
   }
   
   getRoots().forEach(r => renderRow(r, 0));
-  body.innerHTML = '';
-  rows.forEach(r => body.appendChild(r));
+  tbodyFixed.innerHTML = ''; tbodyScroll.innerHTML = '';
+  rowsFixed.forEach(r => tbodyFixed.appendChild(r)); rowsScroll.forEach(r => tbodyScroll.appendChild(r));
 }
 
-function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-/* ========== EXPANDIR ========== */
 function toggleExpand(id) { expanded[id] = expanded[id] === false ? true : false; render(); }
 function expandAll(v) { data.forEach(t => expanded[t.id] = v); render(); }
 
-/* ========== MODAL TAREFA ========== */
+async function togglePause(id) {
+  const t = data.find(x => x.id === id); if (!t || t.status === 'concluida') return;
+  const novoStatus = t.status === 'pausada' ? 'andamento' : 'pausada';
+  try { await _supabase.from('tarefas').update({ status: novoStatus }).eq('id', id); t.status = novoStatus; render(); } catch(e) { alert('Erro'); }
+}
+
 function openTaskModal(task, parentId) {
-  const modal = document.getElementById('taskModal');
-  document.getElementById('taskModalTitle').textContent = task ? 'Editar Tarefa' : (parentId ? 'Nova Subtarefa' : 'Nova Tarefa');
+  document.getElementById('taskModal').classList.add('active');
+  document.getElementById('taskModalTitle').textContent = task ? 'Editar' : 'Nova Tarefa';
   document.getElementById('taskId').value = task ? task.id : '';
   document.getElementById('taskParentId').value = parentId || '';
   document.getElementById('taskName').value = task ? task.name : '';
@@ -518,162 +337,80 @@ function openTaskModal(task, parentId) {
   document.getElementById('taskStatus').value = task ? (task.status||'pendente') : 'pendente';
   document.getElementById('taskNotes').value = task ? (task.notes||'') : '';
   document.getElementById('taskMsg').classList.remove('show');
-  modal.classList.add('active');
 }
 function closeTaskModal() { document.getElementById('taskModal').classList.remove('active'); }
 function addSubtask(parentId) { openTaskModal(null, parentId); }
 function editTask(id) { const t = data.find(x => x.id === id); if (t) openTaskModal(t, t.parentId); }
 
-/* ========== SALVAR TAREFA NA NUVEM ========== */
 async function saveTask() {
-  const id = document.getElementById('taskId').value;
-  const parentId = document.getElementById('taskParentId').value || null;
-  const name = document.getElementById('taskName').value.trim();
-  const owner = document.getElementById('taskOwner').value.trim();
-  const start = document.getElementById('taskStart').value;
-  const end = document.getElementById('taskEnd').value;
-  const status = document.getElementById('taskStatus').value;
-  const notes = document.getElementById('taskNotes').value.trim();
+  const id = document.getElementById('taskId').value, parentId = document.getElementById('taskParentId').value || null;
+  const name = document.getElementById('taskName').value.trim(), owner = document.getElementById('taskOwner').value.trim();
+  const start = document.getElementById('taskStart').value, end = document.getElementById('taskEnd').value;
+  const status = document.getElementById('taskStatus').value, notes = document.getElementById('taskNotes').value.trim();
   const msg = document.getElementById('taskMsg');
 
-  if (!name) { msg.textContent = 'Informe o nome da tarefa.'; msg.classList.add('show'); return; }
-  if (!start || !end) { msg.textContent = 'Informe as datas de início e entrega.'; msg.classList.add('show'); return; }
-  if (parseDate(end) < parseDate(start)) { msg.textContent = 'A data de entrega não pode ser anterior ao início.'; msg.classList.add('show'); return; }
+  if (!name || !start || !end) { msg.textContent = 'Preencha os campos obrigatórios.'; msg.classList.add('show'); return; }
+  if (parseDate(end) < parseDate(start)) { msg.textContent = 'Data de entrega inválida.'; msg.classList.add('show'); return; }
   
   if (id) {
     const original = data.find(x => x.id === id);
-    const dateChanged = original && (original.start !== start || original.end !== end);
-    if (dateChanged) {
+    if (original && (original.start !== start || original.end !== end)) {
       pendingEdit = { id, parentId, name, owner, start, end, status, notes };
-      closeTaskModal();
-      openJustify();
-      return;
+      closeTaskModal(); openJustify(); return;
     }
   }
   await applyTask({ id, parentId, name, owner, start, end, status, notes });
 }
 
 async function applyTask(p) {
-  const payload = {
-    id: p.id || uid(),
-    parent_id: p.parentId,
-    name: p.name,
-    owner: p.owner || '',
-    start_date: p.start,
-    end_date: p.end,
-    status: p.status,
-    notes: p.notes || '',
-    justificativas: p.justificativas || []
-  };
-
+  const payload = { id: p.id || uid(), parent_id: p.parentId, name: p.name, owner: p.owner || '', start_date: p.start, end_date: p.end, status: p.status, notes: p.notes || '', justificativas: p.justificativas || [] };
   try {
-    const { error } = await _supabase.from('tarefas').upsert(payload);
-    if (error) throw error;
-
-    if (p.id) {
-      const t = data.find(x => x.id === p.id);
-      if (t) Object.assign(t, p);
-    } else {
-      data.push({ id: payload.id, parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, status: p.status, notes: p.notes, justificativas: [] });
-      if (p.parentId) expanded[p.parentId] = true;
-    }
-    closeTaskModal(); 
-    render();
-    updateBackupInfo();
-  } catch(e) {
-    console.error(e);
-    alert('Erro ao salvar a tarefa no banco de dados.');
-  }
+    await _supabase.from('tarefas').upsert(payload);
+    if (p.id) Object.assign(data.find(x => x.id === p.id), p);
+    else { data.push({ id: payload.id, parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, status: p.status, notes: p.notes, justificativas: [] }); if (p.parentId) expanded[p.parentId] = true; }
+    closeTaskModal(); render(); document.getElementById('backupInfo').textContent = `${data.length} tarefa(s) sincronizada(s) na nuvem`;
+  } catch(e) { alert('Erro ao salvar no banco de dados.'); }
 }
 
-/* ========== JUSTIFICATIVA ========== */
-function openJustify() {
-  document.getElementById('justifyText').value = '';
-  document.getElementById('justifyMsg').classList.remove('show');
-  document.getElementById('justifyModal').classList.add('active');
-}
-function cancelJustify() {
-  pendingEdit = null;
-  document.getElementById('justifyModal').classList.remove('active');
-}
+function openJustify() { document.getElementById('justifyText').value = ''; document.getElementById('justifyMsg').classList.remove('show'); document.getElementById('justifyModal').classList.add('active'); }
+function cancelJustify() { pendingEdit = null; document.getElementById('justifyModal').classList.remove('active'); }
 async function confirmJustify() {
   const txt = document.getElementById('justifyText').value.trim();
-  const msg = document.getElementById('justifyMsg');
-  if (txt.length < 5) { msg.textContent = 'Informe uma justificativa com pelo menos 5 caracteres.'; msg.classList.add('show'); return; }
-  const p = pendingEdit;
-  if (!p) { cancelJustify(); return; }
-  const original = data.find(x => x.id === p.id);
-  
-  const log = (original.justificativas || []);
-  log.push({ data: new Date().toISOString(), de: { inicio: original.start, entrega: original.end }, para: { inicio: p.start, entrega: p.end }, motivo: txt });
-  p.justificativas = log;
-  
-  document.getElementById('justifyModal').classList.remove('active');
-  pendingEdit = null;
-  await applyTask(p);
+  if (txt.length < 5) { document.getElementById('justifyMsg').textContent = 'Mínimo 5 caracteres.'; document.getElementById('justifyMsg').classList.add('show'); return; }
+  const p = pendingEdit, original = data.find(x => x.id === p.id);
+  p.justificativas = (original.justificativas || []).concat([{ data: new Date().toISOString(), de: { inicio: original.start, entrega: original.end }, para: { inicio: p.start, entrega: p.end }, motivo: txt }]);
+  document.getElementById('justifyModal').classList.remove('active'); pendingEdit = null; await applyTask(p);
 }
 
-/* ========== EXCLUIR DA NUVEM ========== */
 async function deleteTask(id) {
-  const t = data.find(x => x.id === id); if (!t) return;
-  const children = getChildren(id);
-  const hasChildren = children.length > 0;
-  
-  if (!hasChildren) {
-    if (!confirm(`Excluir a tarefa "${t.name}"?\n\nEsta ação não pode ser desfeita.`)) return;
-    await removeTaskAndSubtree(id); return;
+  const t = data.find(x => x.id === id), children = getChildren(id);
+  if (children.length === 0) {
+    if (!confirm(`Excluir "${t.name}"?`)) return;
+    await _supabase.from('tarefas').delete().eq('id', id); data = data.filter(x => x.id !== id); render(); return;
   }
-  
-  const msg = `A tarefa "${t.name}" possui ${children.length} subtarefa(s).\n\nOK = EXCLUIR TUDO (tarefa + subtarefas).\nCancelar = escolher outra opção.`;
-  if (confirm(msg)) { await removeTaskAndSubtree(id); return; }
-  
-  const mover = confirm(`Deseja MANTER as subtarefas de "${t.name}"?\n\nOK = manter subtarefas (promovidas a tarefas principais)\nCancelar = não excluir nada`);
-  if (mover) {
-    try {
-      for (let c of children) {
-        await _supabase.from('tarefas').update({ parent_id: null }).eq('id', c.id);
-      }
-      await _supabase.from('tarefas').delete().eq('id', id);
-      children.forEach(c => { c.parentId = null; });
-      data = data.filter(x => x.id !== id);
-      render();
-      updateBackupInfo();
-    } catch(e) { alert('Erro ao excluir.'); }
+  if (confirm(`A tarefa "${t.name}" possui ${children.length} subtarefa(s).\nOK = Excluir Tudo.\nCancelar = Manter subtarefas.`)) {
+    await _supabase.from('tarefas').delete().in('id', getSubtree(id).map(x => x.id)); data = data.filter(x => !getSubtree(id).map(x => x.id).includes(x.id)); render();
+  } else {
+    for (let c of children) await _supabase.from('tarefas').update({ parent_id: null }).eq('id', c.id);
+    await _supabase.from('tarefas').delete().eq('id', id); children.forEach(c => c.parentId = null); data = data.filter(x => x.id !== id); render();
   }
 }
 
-async function removeTaskAndSubtree(id) {
-  const ids = getSubtree(id).map(x => x.id);
-  try {
-    const { error } = await _supabase.from('tarefas').delete().in('id', ids);
-    if (error) throw error;
-    data = data.filter(x => !ids.includes(x.id));
-    render();
-    updateBackupInfo();
-  } catch(e) { alert('Erro ao excluir do banco de dados.'); }
-}
-
-/* ========== SELEÇÃO + DELETE ========== */
 document.addEventListener('click', e => {
   const tr = e.target.closest('tr[data-id]');
   if (tr) {
     document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
-    tr.classList.add('selected');
+    document.querySelectorAll(`tr[data-id="${tr.dataset.id}"]`).forEach(r => r.classList.add('selected'));
     selectedTaskId = tr.dataset.id;
   } else if (!e.target.closest('.modal-overlay') && !e.target.closest('button')) {
-    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
-    selectedTaskId = null;
+    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected')); selectedTaskId = null;
   }
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Delete' && selectedTaskId) { deleteTask(selectedTaskId); selectedTaskId = null; }
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
-    pendingEdit = null;
-  }
+  if (e.key === 'Escape') { document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active')); pendingEdit = null; }
 });
 
-/* ========== INIT ========== */
 load();
 </script>
 </body>
