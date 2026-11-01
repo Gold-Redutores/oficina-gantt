@@ -106,6 +106,11 @@
   <button class="secondary" onclick="expandAll(true)">Expandir Tudo</button>
   <button class="secondary" onclick="expandAll(false)">Recolher Tudo</button>
 </div>
+ <div class="backup-panel no-print" style="margin-bottom: 10px;">
+  <strong>🔍 Filtrar:</strong>
+  <input type="text" id="filtroBusca" onkeyup="filtrarTabela()" placeholder="Digite o nome da tarefa ou responsável..." style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 300px; font-size: 13px;">
+  <span style="color: #888; font-size: 12px; margin-left: 10px;">(Limpe o campo para ver todas)</span>
+</div>
 
 <div class="backup-panel no-print">
   <strong>☁️ Sincronização na Nuvem (Supabase) ativada</strong>
@@ -411,6 +416,23 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active')); pendingEdit = null; }
 });
 
+ function filtrarTabela() {
+  const termo = document.getElementById('filtroBusca').value.toLowerCase();
+  const trsFixas = document.querySelectorAll('#tbodyFixed tr');
+  const trsScroll = document.querySelectorAll('#tbodyScroll tr');
+
+  // Como temos duas tabelas lado a lado, precisamos esconder as linhas de ambas simultaneamente
+  for (let i = 0; i < trsFixas.length; i++) {
+    const textoLinha = trsFixas[i].innerText.toLowerCase();
+    const deveMostrar = textoLinha.includes(termo);
+    
+    // Aplica o display none/table-row nas duas tabelas
+    trsFixas[i].style.display = deveMostrar ? '' : 'none';
+    if (trsScroll[i]) {
+      trsScroll[i].style.display = deveMostrar ? '' : 'none';
+    }
+  }
+}
 load();
 </script>
 </body>
