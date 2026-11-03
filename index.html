@@ -221,6 +221,9 @@
   </div>
 </div>
 <script>
+
+ /* ===== BLOCO 02 ===== */
+ 
 /* ===== CONEXÃO COM SUPABASE ===== */
 const SUPABASE_URL = 'https://wqtzhhiocmdxiipcsbdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndxdHpoaGlvY21keGlpcGNzYmRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDk3MDUsImV4cCI6MjEwODc4NTcwNX0.s2g9KplJwoxDqlB4eSCIIPN8TK09IEzb1-dgHL9_pXI';
@@ -317,8 +320,9 @@ function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio
  
   /* ===== BLOCO 3 (JavaScript) ===== */
 
-  
-  function renderBody() {
+  /* ===== BLOCO 3 (JavaScript - Tabela e Ações) ===== */
+
+function renderBody() {
   const tbodyFixed = document.getElementById('tbodyFixed'), tbodyScroll = document.getElementById('tbodyScroll');
   const rowsFixed = [], rowsScroll = [];
   const { min, totalDays } = window.__range;
@@ -329,13 +333,20 @@ function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio
     const passaFiltro = termoFiltro === "" || textoBusca.includes(termoFiltro);
 
     const offset = daysBetween(min, parseDate(t.start)), span = daysBetween(parseDate(t.start), parseDate(t.end)) + 1;
-    const pct = calcularProgresso(t), concluida = t.status === 'concluida' || pct >= 100;
+    
+    // REGRA DE COR VERDE: A linha só fica verde se o status manual for 'concluida'
+    const pct = calcularProgresso(t), concluida = t.status === 'concluida';
+    
     const atrasada = !concluida && parseDate(t.end) < new Date(new Date().toDateString()), pausada = t.status === 'pausada';
+    
     let barClass = 'bar ' + (level > 0 ? 'subtask ' : '') + (concluida ? 'done ' : '') + (atrasada ? 'overdue ' : '') + (pausada ? 'paused ' : '');
     const isSelected = selectedTaskId === t.id ? 'selected' : '';
 
-    // AQUI ESTÁ A MUDANÇA: Adicionado ${concluida ? 'row-done' : ''}
-    const trF = document.createElement('tr'); trF.className = `row-tarefa ${isSelected} ${concluida ? 'row-done' : ''}`; trF.dataset.id = t.id;
+    // Cria a linha da esquerda (Texto)
+    const trF = document.createElement('tr'); 
+    trF.className = `row-tarefa ${isSelected} ${concluida ? 'row-done' : ''}`; 
+    trF.dataset.id = t.id;
+    
     trF.innerHTML = `
       <td class="col-task"><div class="task-name" style="padding-left:${level * 20}px;">
         ${hasChildren ? `<span style="cursor:pointer;" onclick="event.stopPropagation();toggleExpand('${t.id}')">${isExpanded ? '▼' : '▶'}</span>` : '<span style="width:14px;display:inline-block;"></span>'}
@@ -354,8 +365,11 @@ function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio
         <button class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️</button>
       </div></td>`;
 
-    // AQUI TAMBÉM: Adicionado ${concluida ? 'row-done' : ''}
-    const trS = document.createElement('tr'); trS.className = `row-tarefa ${isSelected} ${concluida ? 'row-done' : ''}`; trS.dataset.id = t.id;
+    // Cria a linha da direita (Gráfico)
+    const trS = document.createElement('tr'); 
+    trS.className = `row-tarefa ${isSelected} ${concluida ? 'row-done' : ''}`; 
+    trS.dataset.id = t.id;
+    
     const tdG = document.createElement('td'); tdG.colSpan = totalDays; tdG.className = 'gantt-cell';
     tdG.innerHTML = `<div class="${barClass}" style="left:${offset * dayWidth}px;width:${span * dayWidth}px;" onclick="editTask('${t.id}')">
       <div class="bar-fill" style="width:${pct}%"></div><span class="bar-text">${span >= 3 && pct > 0 ? pct + '%' : ''}</span>
@@ -501,4 +515,3 @@ load();
 </script>
 </body>
 </html>
-  
