@@ -4,17 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gantt - Controle de Serviços - Gold</title>
-<!-- Importação da biblioteca do Supabase para conectar com a nuvem -->
+<!-- Biblioteca do Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ===== ESTILOS GERAIS E FUNDO ===== */
+  /* ===== RESET E FUNDO ===== */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #222; padding: 20px; background-color: #f0f2f5; position: relative; min-height: 100vh; }
-  
-  /* Fundo com a imagem técnica de opacidade baixa */
   body::before { content: ""; position: fixed; inset: 0; background-image: url('fundo.png'); background-size: cover; background-position: center; opacity: 0.08; z-index: -1; pointer-events: none; }
   
-  /* Tela de carregamento que aparece antes do Supabase responder */
+  /* ===== TELA DE CARREGAMENTO ===== */
   #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-size: 18px; color: #1a73e8; font-weight: bold; }
   .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a73e8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -28,31 +26,27 @@
   button:hover { background: #1558b0; }
   button.secondary { background: #5f6368; } button.secondary:hover { background: #3c4043; }
   button.success { background: #188038; } button.success:hover { background: #0d652d; }
+  button.danger { background: #d93025; } button.danger:hover { background: #a50e0e; }
 
-  /* ===== SISTEMA DE DUAS TABELAS (GRID) ===== */
-  /* A tabela da esquerda é fixa, a da direita (gráfico) tem rolagem própria */
+  /* ===== LAYOUT DE DUAS TABELAS ===== */
   .gantt-layout { display: flex; background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.15); overflow: hidden; width: 100%; }
-  
-  /* Tabela Esquerda (Textos) */
   .tabela-fixa { flex-shrink: 0; border-right: 2px solid #1a73e8; z-index: 10; }
   .tabela-fixa table { border-collapse: collapse; }
   .tabela-fixa th, .tabela-fixa td { border: 1px solid #e0e0e0; padding: 4px 6px; height: 32px; font-size: 12px; white-space: nowrap; }
   .tabela-fixa thead th { background: #1a73e8; color: #fff; height: 50px; text-align: center; font-size: 11px; }
   .col-task { width: 320px; text-align: left; }
   .col-info { width: 80px; text-align: center; }
-  .col-act { width: 100px; text-align: center; }
+  .col-act { width: 110px; text-align: center; }
 
-  /* Tabela Direita (Gráfico) */
   .tabela-grafico { overflow-x: auto; flex-grow: 1; }
   .tabela-grafico table { border-collapse: collapse; }
   .tabela-grafico th, .tabela-grafico td { border: 1px solid #e0e0e0; padding: 0; height: 32px; background: #fff; }
   .tabela-grafico thead th { background: #1a73e8; color: #fff; height: 25px; text-align: center; font-size: 11px; }
 
-  /* Efeito visual ao passar o mouse ou selecionar uma linha (aplica nas duas tabelas) */
   .tabela-fixa tbody tr:hover, .tabela-grafico tbody tr:hover { background: #f5f9ff; }
   .tabela-fixa tbody tr.selected, .tabela-grafico tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
 
-  /* ===== TEXTOS E BOTÕES DE AÇÃO ===== */
+  /* ===== TEXTOS E AÇÕES ===== */
   .task-name { display: flex; align-items: center; gap: 6px; }
   .tarefa-pai { font-weight: 600; color: #1a3d6d; }
   .subtask-name { color: #444; }
@@ -63,37 +57,32 @@
   .actions button.del:hover { background: #f6c7c2; }
   .actions button.pause { background: #fef7e0; color: #b06000; font-weight: 600; }
   .actions button.pause:hover { background: #feefc3; }
+  .actions button.hist { background: #fff3cd; color: #b06000; border: 1px solid #fbbc04; }
 
-  /* ===== ETIQUETAS (BADGES) ===== */
+  /* ===== ETIQUETAS ===== */
   .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px; }
   .badge-pai { background: #e8f0fe; color: #1a73e8; }
   .badge-sub { background: #e6f4ea; color: #137333; }
   .badge-late { background: #fce8e6; color: #d93025; }
   .badge-paused { background: #fef7e0; color: #b06000; }
 
-  /* ===== BARRAS DO GRÁFICO ===== */
+  /* ===== GRÁFICO ===== */
   .gantt-cell { position: relative; overflow: hidden; }
   .bar { position: absolute; top: 6px; bottom: 6px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; background: #e8f0fe; border: 1px solid #1a73e8; }
   .bar:hover { filter: brightness(0.95); }
   .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #1a73e8; z-index: 1; }
   .bar-text { position: relative; z-index: 2; color: #1a3d6d; mix-blend-mode: difference; }
-  
-  /* Cores específicas dependendo do status da tarefa */
   .bar.subtask { border-color: #34a853; background: #e6f4ea; }
   .bar.subtask .bar-fill { background: #34a853; }
   .bar.done { border-color: #9aa0a6; background: #f1f3f4; }
   .bar.done .bar-fill { background: #9aa0a6; }
   .bar.overdue { border-color: #d93025; background: #fce8e6; }
   .bar.overdue .bar-fill { background: #d93025; }
-  
-  /* Desenho tracejado para quando a tarefa está pausada */
   .bar.paused { border: 2px dashed #d93025; background: repeating-linear-gradient(45deg, #fce8e6, #fce8e6 5px, #fff 5px, #fff 10px); }
   .bar.paused .bar-fill { background: repeating-linear-gradient(45deg, #d93025, #d93025 5px, #fce8e6 5px, #fce8e6 10px); }
-  
-  /* Linha vermelha vertical indicando o dia de hoje */
   .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #ea4335; z-index: 4; pointer-events: none; }
 
-  /* ===== MODAIS (Janelas que abrem) ===== */
+  /* ===== MODAIS ===== */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 100; }
   .modal-overlay.active { display: flex; }
   .modal { background: #fff; border-radius: 8px; padding: 20px; width: 500px; max-width: 95vw; max-height: 90vh; overflow: auto; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
@@ -106,7 +95,7 @@
   .modal .msg.show { display: block; }
   .modal .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-  /* ===== LEGENDA E PAINEL DE BACKUP ===== */
+  /* ===== LEGENDA E BACKUP ===== */
   .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; margin-top: 10px; color: #555; }
   .legend span { display: flex; align-items: center; gap: 5px; }
   .legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
@@ -116,16 +105,13 @@
 </head>
 <body>
 
-<!-- Tela de carregamento -->
 <div id="loadingOverlay"><div class="spinner"></div>Carregando dados do servidor...</div>
 
-<!-- Cabeçalho -->
 <div class="header">
   <img src="logo-gold.png" alt="Gold" onerror="this.style.display='none';">
   <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
 </div>
 
-<!-- Botões de Ação -->
 <div class="toolbar no-print">
   <button onclick="openTaskModal()">➕ Nova Tarefa</button>
   <button class="secondary" onclick="window.print()">🖨️ Imprimir</button>
@@ -133,23 +119,19 @@
   <button class="secondary" onclick="expandAll(false)">Recolher Tudo</button>
 </div>
 
-<!-- Barra de Backup -->
 <div class="backup-panel no-print">
   <strong>☁️ Sincronização na Nuvem (Supabase) ativada</strong>
   <button class="success" onclick="exportBackup()">📤 Baixar Cópia (Backup)</button>
   <span id="backupInfo" style="color:#888;margin-left:auto;">Conectando...</span>
 </div>
 
-<!-- ===== BARRA DE FILTRO ===== -->
 <div class="backup-panel no-print" style="margin-bottom: 10px;">
   <strong>🔍 Filtrar:</strong>
   <input type="text" id="filtroBusca" onkeyup="filtrarTabela()" placeholder="Digite o nome da tarefa ou responsável..." style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 300px; font-size: 13px;">
   <span style="color: #888; font-size: 12px; margin-left: 10px;">(Limpe o campo para ver todas)</span>
 </div>
 
-<!-- ===== AS DUAS TABELAS LADO A LADO ===== -->
 <div class="gantt-layout">
-  <!-- Tabela 1: Fixa (Dados) -->
   <div class="tabela-fixa">
     <table>
       <thead>
@@ -165,7 +147,6 @@
       <tbody id="tbodyFixed"></tbody>
     </table>
   </div>
-  <!-- Tabela 2: Gráfico (Rolagem) -->
   <div class="tabela-grafico">
     <table>
       <thead id="theadScroll"></thead>
@@ -174,7 +155,6 @@
   </div>
 </div>
 
-<!-- Legenda de Cores -->
 <div class="legend no-print">
   <span><i style="background:#1a73e8"></i> Em Andamento</span>
   <span><i style="background:#34a853"></i> Subtarefa</span>
@@ -184,7 +164,7 @@
   <span><i style="background:#ea4335;width:3px"></i> Hoje</span>
 </div>
 
-<!-- MODAL: Criar/Editar Tarefa -->
+<!-- MODAL TAREFA -->
 <div class="modal-overlay" id="taskModal">
   <div class="modal">
     <h2 id="taskModalTitle">Nova Tarefa</h2>
@@ -210,7 +190,7 @@
   </div>
 </div>
 
-<!-- MODAL: Justificativa de alteração de data -->
+<!-- MODAL JUSTIFICATIVA -->
 <div class="modal-overlay" id="justifyModal">
   <div class="modal">
     <h2>⚠️ Alteração de Prazo</h2>
@@ -223,139 +203,93 @@
     </div>
   </div>
 </div>
+
+<!-- MODAL HISTÓRICO -->
+<div class="modal-overlay" id="historicoModal">
+  <div class="modal">
+    <h2>📋 Histórico de Alterações de Prazo</h2>
+    <div id="historicoConteudo" style="font-size: 13px; margin-top: 15px;"></div>
+    <div class="footer">
+      <button class="secondary" onclick="document.getElementById('historicoModal').classList.remove('active')">Fechar</button>
+    </div>
+  </div>
+</div>
 <script>
-/* =========================================================
-   CONEXÃO COM O BANCO DE DADOS SUPABASE
-   ========================================================= */
+/* ===== CONEXÃO COM SUPABASE ===== */
 const SUPABASE_URL = 'https://wqtzhhiocmdxiipcsbdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndxdHpoaGlvY21keGlpcGNzYmRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDk3MDUsImV4cCI6MjEwODc4NTcwNX0.s2g9KplJwoxDqlB4eSCIIPN8TK09IEzb1-dgHL9_pXI';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* =========================================================
-   VARIÁVEIS GLOBAIS DO SISTEMA
-   ========================================================= */
-let data = [];             // Array que guarda todas as tarefas vindas da nuvem
-let expanded = {};         // Objeto que controla quais tarefas estão abertas (com subtarefas à vista)
-let dayWidth = 26;         // Largura de cada quadradinho de dia no gráfico (em pixels)
-let pendingEdit = null;    // Guarda temporariamente uma edição que precisará de justificativa
-let selectedTaskId = null; // ID da tarefa clicada no momento
-let termoFiltro = "";      // Guarda o texto digitado na barra de pesquisa
-
-/* Gera um ID único para cada nova tarefa */
+/* ===== VARIÁVEIS GLOBAIS ===== */
+let data = [], expanded = {}, dayWidth = 26, pendingEdit = null, selectedTaskId = null, termoFiltro = "";
 function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2,7); }
 
-/* =========================================================
-   CARREGAMENTO DOS DADOS (SUPABASE -> HTML)
-   ========================================================= */
+/* ===== CARREGAR DADOS ===== */
 async function load() {
   try {
-    // Busca todas as tarefas ordenando pela data de início
     const { data: tarefas, error } = await _supabase.from('tarefas').select('*').order('start_date', { ascending: true });
     if (error) throw error;
-    
-    // Converte os nomes das colunas do banco (snake_case) para o padrão do JavaScript (camelCase)
     data = (tarefas || []).map(t => ({
       id: t.id, parentId: t.parent_id, name: t.name, owner: t.owner,
       start: t.start_date, end: t.end_date, status: t.status, notes: t.notes, justificativas: t.justificativas || []
     }));
-  } catch(e) { 
-    data = []; 
-  }
-  
-  // Atualiza a quantidade de tarefas na tela e esconde o spinner de carregamento
+  } catch(e) { data = []; }
   document.getElementById('backupInfo').textContent = `${data.length} tarefa(s) sincronizada(s) na nuvem`;
   document.getElementById('loadingOverlay').style.display = 'none';
   render();
 }
 
-/* =========================================================
-   UTILITÁRIOS DE DATA E TEXTO
-   ========================================================= */
-// Transforma "2026-10-25" em um objeto Date do JavaScript
+/* ===== FUNÇÕES DE DATA E TEXTO ===== */
 function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
-// Transforma um objeto Date em "2026-10-25"
 function fmtDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-// Adiciona ou subtrai dias de uma data
 function addDays(d,n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
-// Calcula a diferença de dias entre duas datas
 function daysBetween(a,b){ return Math.round((b - a) / 86400000); }
-// Retorna a data de hoje formatada
 function todayStr(){ return fmtDate(new Date()); }
-// Formata para o padrão brasileiro DD/MM/AAAA
 function formatBR(iso) { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
-// Evita que caracteres especiais quebrem o HTML
 function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-/* =========================================================
-   LÓGICA DE HIERARQUIA (PAIS E FILHOS)
-   ========================================================= */
-// Retorna as subtarefas de uma tarefa pai
+/* ===== HIERARQUIA E PROGRESSO ===== */
 function getChildren(id) { return data.filter(t => t.parentId === id); }
-// Retorna as tarefas que não têm pai (tarefas principais)
 function getRoots() { return data.filter(t => !t.parentId); }
-// Retorna a tarefa e todos os seus descendentes
 function getSubtree(id) { const out = [data.find(t => t.id === id)]; getChildren(id).forEach(c => out.push(...getSubtree(c.id))); return out; }
 
-/* =========================================================
-   CÁLCULO AUTOMÁTICO DE PROGRESSO
-   ========================================================= */
 function calcularProgresso(t) {
   if (t.status === 'concluida') return 100;
   if (t.status === 'pendente') return 0;
-  
   const hoje = new Date(new Date().toDateString());
   const inicio = parseDate(t.start), fim = parseDate(t.end);
-  
   if (hoje < inicio) return 0;
   if (hoje >= fim) return 100;
-  
-  // Calcula a porcentagem de dias que já passaram
-  const diasTotais = daysBetween(inicio, fim) + 1;
-  const diasPassados = daysBetween(inicio, hoje) + 1;
-  return Math.min(100, Math.max(0, Math.round((diasPassados / diasTotais) * 100)));
+  return Math.min(100, Math.max(0, Math.round((daysBetween(inicio, hoje) + 1) / (daysBetween(inicio, fim) + 1) * 100)));
 }
 
-/* =========================================================
-   SISTEMA DE FILTRO
-   ========================================================= */
+/* ===== FILTRO ===== */
 function filtrarTabela() {
-  // Salva o termo digitado em minúsculo para facilitar a comparação
   termoFiltro = document.getElementById('filtroBusca').value.toLowerCase();
-  render(); // Redesenha a tabela aplicando a regra do filtro
+  render();
 }
 
-/* =========================================================
-   FUNÇÃO PRINCIPAL DE RENDERIZAÇÃO
-   ========================================================= */
+/* ===== FUNÇÃO DE RENDERIZAÇÃO ===== */
 function render() { renderHead(); renderBody(); }
 
-/* Desenha os cabeçalhos (meses e dias do gráfico) */
 function renderHead() {
   let min = null, max = null;
-  
-  // Descobre a menor e a maior data entre todas as tarefas para saber o tamanho do gráfico
   data.forEach(t => {
     if (!t.start || !t.end) return;
     const s = parseDate(t.start), e = parseDate(t.end);
     if (!min || s < min) min = new Date(s);
     if (!max || e > max) max = new Date(e);
   });
-  
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   if (!min) min = addDays(hoje, -3);
   if (!max) max = addDays(hoje, 10);
-  
-  // Adiciona uma margem de dias antes e depois para não colar nas bordas
   min = addDays(min, -3); max = addDays(max, 5);
-  
-  // Define o total de dias que o gráfico terá
   const totalDays = daysBetween(min, max) + 1;
-  window.__range = { min, totalDays }; // Salva globalmente para o renderBody usar
+  window.__range = { min, totalDays };
   
   const monthRow = [], dayRow = [];
   let lastMonth = null, mStart = 0, monthGroups = [];
   
-  // Agrupa os dias por mês para criar a barra superior "Outubro / 2026"
   for (let i = 0; i < totalDays; i++) {
     const d = addDays(min, i), key = d.getFullYear() + '-' + d.getMonth();
     if (key !== lastMonth) {
@@ -366,42 +300,30 @@ function renderHead() {
   monthGroups.push({ label: monthLabel(addDays(min, mStart)), span: totalDays - mStart });
   monthGroups.forEach(g => monthRow.push(`<th colspan="${g.span}" style="text-align:center;">${g.label}</th>`));
   
-  // Cria cada coluna de dia individual (mostrando o número e a inicial do dia da semana)
   for (let i = 0; i < totalDays; i++) {
     const d = addDays(min, i), isWeekend = d.getDay() === 0 || d.getDay() === 6;
     const style = `min-width:${dayWidth}px;width:${dayWidth}px;` + (isWeekend ? 'background:#eef1f6;' : '');
     dayRow.push(`<th style="${style}">${d.getDate()}<br><span style="font-size:8px;">${['D','S','T','Q','Q','S','S'][d.getDay()]}</span></th>`);
   }
-  
   document.getElementById('theadScroll').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
 }
-
-// Função auxiliar para formatar o nome do mês
 function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()]} / ${d.getFullYear()}`; }
-
- /* =========================================================
-   DESENHO DAS LINHAS (CORPO DA TABELA)
-   ========================================================= */
-function renderBody() {
+  function renderBody() {
   const tbodyFixed = document.getElementById('tbodyFixed'), tbodyScroll = document.getElementById('tbodyScroll');
   const rowsFixed = [], rowsScroll = [];
   const { min, totalDays } = window.__range;
   
   function renderRow(t, level) {
     const hasChildren = getChildren(t.id).length > 0, isExpanded = expanded[t.id] !== false && hasChildren;
-    
-    // VERIFICAÇÃO DO FILTRO: Se o termo existir, checa se a tarefa ou o dono batem com a busca
     const textoBusca = (t.name + ' ' + (t.owner || '')).toLowerCase();
     const passaFiltro = termoFiltro === "" || textoBusca.includes(termoFiltro);
 
-    // Configurações visuais da barra
     const offset = daysBetween(min, parseDate(t.start)), span = daysBetween(parseDate(t.start), parseDate(t.end)) + 1;
     const pct = calcularProgresso(t), concluida = t.status === 'concluida' || pct >= 100;
     const atrasada = !concluida && parseDate(t.end) < new Date(new Date().toDateString()), pausada = t.status === 'pausada';
     let barClass = 'bar ' + (level > 0 ? 'subtask ' : '') + (concluida ? 'done ' : '') + (atrasada ? 'overdue ' : '') + (pausada ? 'paused ' : '');
     const isSelected = selectedTaskId === t.id ? 'selected' : '';
 
-    // Cria a linha para a Tabela Fixa (Esquerda)
     const trF = document.createElement('tr'); trF.className = `row-tarefa ${isSelected}`; trF.dataset.id = t.id;
     trF.innerHTML = `
       <td class="col-task"><div class="task-name" style="padding-left:${level * 20}px;">
@@ -415,48 +337,155 @@ function renderBody() {
       <td class="col-info">${span}d</td><td class="col-info">${pct}%</td>
       <td class="col-act no-print"><div class="actions">
         ${!concluida ? `<button class="pause" onclick="event.stopPropagation();togglePause('${t.id}')">${pausada ? '▶️' : '⏸️'}</button>` : ''}
+        ${t.justificativas && t.justificativas.length > 0 ? `<button class="hist" onclick="event.stopPropagation();verHistorico('${t.id}')">📋</button>` : ''}
         <button onclick="event.stopPropagation();editTask('${t.id}')">✎</button>
         <button onclick="event.stopPropagation();addSubtask('${t.id}')">➕</button>
         <button class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️</button>
       </div></td>`;
 
-    // Cria a linha para a Tabela do Gráfico (Direita)
     const trS = document.createElement('tr'); trS.className = `row-tarefa ${isSelected}`; trS.dataset.id = t.id;
     const tdG = document.createElement('td'); tdG.colSpan = totalDays; tdG.className = 'gantt-cell';
     tdG.innerHTML = `<div class="${barClass}" style="left:${offset * dayWidth}px;width:${span * dayWidth}px;" onclick="editTask('${t.id}')">
       <div class="bar-fill" style="width:${pct}%"></div><span class="bar-text">${span >= 3 && pct > 0 ? pct + '%' : ''}</span>
     </div>`;
     
-    // Adiciona a linha vertical vermelha se o dia de hoje estiver na tela
     const hoje = new Date(new Date().toDateString());
     if (hoje >= min && hoje <= addDays(min, totalDays-1)) {
       tdG.innerHTML += `<div class="today-line" style="left:${daysBetween(min, hoje) * dayWidth + dayWidth/2}px"></div>`;
     }
     trS.appendChild(tdG);
 
-    // Só adiciona a linha na tela se ela passou no filtro de busca
-    if (passaFiltro) {
-      rowsFixed.push(trF); rowsScroll.push(trS);
-    }
-
-    // Se a tarefa estiver expandida, desenha as subtarefas na sequência
-    if (hasChildren && isExpanded) {
-      getChildren(t.id).forEach(c => renderRow(c, level + 1));
-    }
+    if (passaFiltro) { rowsFixed.push(trF); rowsScroll.push(trS); }
+    if (hasChildren && isExpanded) getChildren(t.id).forEach(c => renderRow(c, level + 1));
   }
   
-  // Inicia o desenho a partir das tarefas principais
   getRoots().forEach(r => renderRow(r, 0));
-  
-  // Limpa a tabela e insere as novas linhas
   tbodyFixed.innerHTML = ''; tbodyScroll.innerHTML = '';
-  rowsFixed.forEach(r => tbodyFixed.appendChild(r)); 
-  rowsScroll.forEach(r => tbodyScroll.appendChild(r));
+  rowsFixed.forEach(r => tbodyFixed.appendChild(r)); rowsScroll.forEach(r => tbodyScroll.appendChild(r));
 }
 
-/* =========================================================
-   EXPANDIR E RECOLHER
-   ========================================================= */
+/* ===== CONTROLES ===== */
 function toggleExpand(id) { expanded[id] = expanded[id] === false ? true : false; render(); }
-function expandAll(v) { data.forEach(t => expanded[t.id] =
- 
+function expandAll(v) { data.forEach(t => expanded[t.id] = v); render(); }
+
+async function togglePause(id) {
+  const t = data.find(x => x.id === id); if (!t || t.status === 'concluida') return;
+  const novoStatus = t.status === 'pausada' ? 'andamento' : 'pausada';
+  try { await _supabase.from('tarefas').update({ status: novoStatus }).eq('id', id); t.status = novoStatus; render(); } catch(e) { alert('Erro'); }
+}
+
+function openTaskModal(task, parentId) {
+  document.getElementById('taskModal').classList.add('active');
+  document.getElementById('taskModalTitle').textContent = task ? 'Editar' : 'Nova Tarefa';
+  document.getElementById('taskId').value = task ? task.id : '';
+  document.getElementById('taskParentId').value = parentId || '';
+  document.getElementById('taskName').value = task ? task.name : '';
+  document.getElementById('taskOwner').value = task ? (task.owner||'') : '';
+  document.getElementById('taskStart').value = task ? task.start : todayStr();
+  document.getElementById('taskEnd').value = task ? task.end : fmtDate(addDays(new Date(), 3));
+  document.getElementById('taskStatus').value = task ? (task.status||'pendente') : 'pendente';
+  document.getElementById('taskNotes').value = task ? (task.notes||'') : '';
+  document.getElementById('taskMsg').classList.remove('show');
+}
+function closeTaskModal() { document.getElementById('taskModal').classList.remove('active'); }
+function addSubtask(parentId) { openTaskModal(null, parentId); }
+function editTask(id) { const t = data.find(x => x.id === id); if (t) openTaskModal(t, t.parentId); }
+
+async function saveTask() {
+  const id = document.getElementById('taskId').value, parentId = document.getElementById('taskParentId').value || null;
+  const name = document.getElementById('taskName').value.trim(), owner = document.getElementById('taskOwner').value.trim();
+  const start = document.getElementById('taskStart').value, end = document.getElementById('taskEnd').value;
+  const status = document.getElementById('taskStatus').value, notes = document.getElementById('taskNotes').value.trim();
+  const msg = document.getElementById('taskMsg');
+
+  if (!name || !start || !end) { msg.textContent = 'Preencha os campos obrigatórios.'; msg.classList.add('show'); return; }
+  if (parseDate(end) < parseDate(start)) { msg.textContent = 'Data de entrega inválida.'; msg.classList.add('show'); return; }
+  
+  if (id) {
+    const original = data.find(x => x.id === id);
+    if (original && (original.start !== start || original.end !== end)) {
+      pendingEdit = { id, parentId, name, owner, start, end, status, notes };
+      closeTaskModal(); openJustify(); return;
+    }
+  }
+  await applyTask({ id, parentId, name, owner, start, end, status, notes });
+}
+
+async function applyTask(p) {
+  const payload = { id: p.id || uid(), parent_id: p.parentId, name: p.name, owner: p.owner || '', start_date: p.start, end_date: p.end, status: p.status, notes: p.notes || '', justificativas: p.justificativas || [] };
+  try {
+    await _supabase.from('tarefas').upsert(payload);
+    if (p.id) Object.assign(data.find(x => x.id === p.id), p);
+    else { data.push({ id: payload.id, parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, status: p.status, notes: p.notes, justificativas: [] }); if (p.parentId) expanded[p.parentId] = true; }
+    closeTaskModal(); render(); document.getElementById('backupInfo').textContent = `${data.length} tarefa(s) sincronizada(s) na nuvem`;
+  } catch(e) { alert('Erro ao salvar no banco de dados.'); }
+}
+
+function openJustify() { document.getElementById('justifyText').value = ''; document.getElementById('justifyMsg').classList.remove('show'); document.getElementById('justifyModal').classList.add('active'); }
+function cancelJustify() { pendingEdit = null; document.getElementById('justifyModal').classList.remove('active'); }
+
+async function confirmJustify() {
+  const txt = document.getElementById('justifyText').value.trim();
+  if (txt.length < 5) { document.getElementById('justifyMsg').textContent = 'Mínimo 5 caracteres.'; document.getElementById('justifyMsg').classList.add('show'); return; }
+  const p = pendingEdit, original = data.find(x => x.id === p.id);
+  p.justificativas = (original.justificativas || []).concat([{ data: new Date().toISOString(), de: { inicio: original.start, entrega: original.end }, para: { inicio: p.start, entrega: p.end }, motivo: txt }]);
+  document.getElementById('justifyModal').classList.remove('active'); pendingEdit = null; await applyTask(p);
+}
+
+function verHistorico(id) {
+  const t = data.find(x => x.id === id);
+  if (!t) return;
+  const container = document.getElementById('historicoConteudo');
+  const logs = t.justificativas || [];
+
+  if (logs.length === 0) {
+    container.innerHTML = '<p style="color:#666;">Nenhuma alteração registrada.</p>';
+  } else {
+    let html = '<ul style="list-style: none; padding: 0;">';
+    logs.slice().reverse().forEach(log => {
+      const dt = new Date(log.data).toLocaleString('pt-BR');
+      html += `<li style="margin-bottom: 10px; border-left: 3px solid #fbbc04; padding: 10px; background: #fdfaf0; border-radius: 4px;">
+        <strong>Data da Alteração:</strong> ${dt} <br>
+        <strong>De:</strong> ${formatBR(log.de.inicio)} até ${formatBR(log.de.entrega)} <br>
+        <strong>Para:</strong> ${formatBR(log.para.inicio)} até ${formatBR(log.para.entrega)} <br>
+        <strong>Motivo:</strong> <i>"${log.motivo}"</i>
+      </li>`;
+    });
+    container.innerHTML = html + '</ul>';
+  }
+  document.getElementById('historicoModal').classList.add('active');
+}
+
+async function deleteTask(id) {
+  const t = data.find(x => x.id === id), children = getChildren(id);
+  if (children.length === 0) {
+    if (!confirm(`Excluir "${t.name}"?`)) return;
+    await _supabase.from('tarefas').delete().eq('id', id); data = data.filter(x => x.id !== id); render(); return;
+  }
+  if (confirm(`A tarefa "${t.name}" possui ${children.length} subtarefa(s).\nOK = Excluir Tudo.\nCancelar = Manter subtarefas.`)) {
+    await _supabase.from('tarefas').delete().in('id', getSubtree(id).map(x => x.id)); data = data.filter(x => !getSubtree(id).map(x => x.id).includes(x.id)); render();
+  } else {
+    for (let c of children) await _supabase.from('tarefas').update({ parent_id: null }).eq('id', c.id);
+    await _supabase.from('tarefas').delete().eq('id', id); children.forEach(c => c.parentId = null); data = data.filter(x => x.id !== id); render();
+  }
+}
+
+document.addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr) {
+    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+    document.querySelectorAll(`tr[data-id="${tr.dataset.id}"]`).forEach(r => r.classList.add('selected'));
+    selectedTaskId = tr.dataset.id;
+  } else if (!e.target.closest('.modal-overlay') && !e.target.closest('button')) {
+    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected')); selectedTaskId = null;
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Delete' && selectedTaskId) { deleteTask(selectedTaskId); selectedTaskId = null; }
+  if (e.key === 'Escape') { document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active')); pendingEdit = null; }
+});
+
+load();
+</script>
+</body>
+</html>
