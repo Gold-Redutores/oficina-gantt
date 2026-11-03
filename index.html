@@ -48,9 +48,13 @@
   .tabela-fixa tbody tr:hover, .tabela-grafico tbody tr:hover { background: #f5f9ff; }
   .tabela-fixa tbody tr.selected, .tabela-grafico tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
   
-  /* Fundo verde claro para tarefas concluídas */
-  .tabela-fixa tbody tr.row-done, .tabela-grafico tbody tr.row-done { background-color: #88E788 !important; }
+   /* Fundo verde claro para tarefas CONCLUÍDAS */
+  .tabela-fixa tbody tr.row-done, .tabela-grafico tbody tr.row-done { background-color: #33f76a !important; }
   .tabela-fixa tbody tr.row-done:hover, .tabela-grafico tbody tr.row-done:hover { background-color: #ceead6 !important; }
+
+  /* Fundo amarelo claro para tarefas ATRASADAS */
+  .tabela-fixa tbody tr.row-late, .tabela-grafico tbody tr.row-late { background-color: #f4f80b !important; }
+  .tabela-fixa tbody tr.row-late:hover, .tabela-grafico tbody tr.row-late:hover { background-color: #ffe69c !important; }bela-fixa tbody tr.row-done:hover, .tabela-grafico tbody tr.row-done:hover { background-color: #ceead6 !important; }
 
   /* ===== TEXTOS E AÇÕES ===== */
   .task-name { display: flex; align-items: center; gap: 6px; }
@@ -318,9 +322,8 @@ function renderHead() {
 }
 function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()]} / ${d.getFullYear()}`; }
  
-  /* ===== BLOCO 3 (JavaScript) ===== */
 
-  /* ===== BLOCO 3 (JavaScript - Tabela e Ações) ===== */
+ /* ===== BLOCO 3 (JavaScript - Tabela e Ações) ===== */
 
 function renderBody() {
   const tbodyFixed = document.getElementById('tbodyFixed'), tbodyScroll = document.getElementById('tbodyScroll');
@@ -337,14 +340,20 @@ function renderBody() {
     // REGRA DE COR VERDE: A linha só fica verde se o status manual for 'concluida'
     const pct = calcularProgresso(t), concluida = t.status === 'concluida';
     
+    // REGRA DE COR AMARELA: Fica amarela se estiver atrasada e NÃO estiver concluída
     const atrasada = !concluida && parseDate(t.end) < new Date(new Date().toDateString()), pausada = t.status === 'pausada';
     
     let barClass = 'bar ' + (level > 0 ? 'subtask ' : '') + (concluida ? 'done ' : '') + (atrasada ? 'overdue ' : '') + (pausada ? 'paused ' : '');
     const isSelected = selectedTaskId === t.id ? 'selected' : '';
 
+    // Define qual classe de fundo será aplicada (verde se concluída, amarelo se atrasada, nenhuma se normal)
+    let rowClass = '';
+    if (concluida) rowClass = 'row-done';
+    else if (atrasada) rowClass = 'row-late';
+
     // Cria a linha da esquerda (Texto)
     const trF = document.createElement('tr'); 
-    trF.className = `row-tarefa ${isSelected} ${concluida ? 'row-done' : ''}`; 
+    trF.className = `row-tarefa ${isSelected} ${rowClass}`; 
     trF.dataset.id = t.id;
     
     trF.innerHTML = `
@@ -367,7 +376,7 @@ function renderBody() {
 
     // Cria a linha da direita (Gráfico)
     const trS = document.createElement('tr'); 
-    trS.className = `row-tarefa ${isSelected} ${concluida ? 'row-done' : ''}`; 
+    trS.className = `row-tarefa ${isSelected} ${rowClass}`; 
     trS.dataset.id = t.id;
     
     const tdG = document.createElement('td'); tdG.colSpan = totalDays; tdG.className = 'gantt-cell';
