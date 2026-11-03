@@ -1,5 +1,3 @@
-<!-- ===== BLOCO 1 ===== -->
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -8,17 +6,16 @@
 <title>Gantt - Controle de Serviços - Gold</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ===== RESET E FUNDO ===== */
+  /* ===== CONFIGURAÇÕES GERAIS E FUNDO ===== */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #222; padding: 20px; background-color: #f0f2f5; position: relative; min-height: 100vh; }
-  body::before { content: ""; position: fixed; inset: 0; background-image: url('fundo.JPG'); background-size: cover; background-position: center; opacity: 0.08; z-index: -1; pointer-events: none; }
+  body::before { content: ""; position: fixed; inset: 0; background-image: url('fundo.jpg'); background-size: cover; background-position: center; opacity: 0.08; z-index: -1; pointer-events: none; }
   
-  /* ===== TELA DE CARREGAMENTO ===== */
   #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-size: 18px; color: #1a73e8; font-weight: bold; }
   .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a73e8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-  /* ===== CABEÇALHO E BOTÕES ===== */
+  /* ===== CABEÇALHO ===== */
   .header { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
   .header img { height: 50px; object-fit: contain; }
   .header h1 { font-size: 22px; color: #1a3d6d; margin: 0; }
@@ -27,41 +24,67 @@
   button:hover { background: #1558b0; }
   button.secondary { background: #5f6368; } button.secondary:hover { background: #3c4043; }
   button.success { background: #188038; } button.success:hover { background: #0d652d; }
-  button.danger { background: #d93025; } button.danger:hover { background: #a50e0e; }
 
-  /* ===== LAYOUT DE DUAS TABELAS ===== */
-  .gantt-layout { display: flex; background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.15); overflow: hidden; width: 100%; }
-  .tabela-fixa { flex-shrink: 0; border-right: 2px solid #1a73e8; z-index: 10; }
-  .tabela-fixa table { border-collapse: collapse; }
-  .tabela-fixa th, .tabela-fixa td { border: 1px solid #e0e0e0; padding: 4px 6px; height: 32px; font-size: 12px; white-space: nowrap; }
-  .tabela-fixa thead th { background: #1a73e8; color: #fff; height: 50px; text-align: center; font-size: 11px; }
-  .col-task { width: 320px; text-align: left; }
-  .col-info { width: 80px; text-align: center; }
-  .col-act { width: 110px; text-align: center; }
+  /* ===== CONTAINER DA TABELA (AQUI FICA A BARRA DE ROLAGEM) ===== */
+  .gantt-container { 
+    background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.15); 
+    overflow-x: auto; /* Cria a barra de rolagem na parte de baixo */
+    max-height: 80vh; /* Cria rolagem vertical se tiver muitas tarefas */
+    position: relative;
+  }
 
-  .tabela-grafico { overflow-x: auto; flex-grow: 1; }
-  .tabela-grafico table { border-collapse: collapse; }
-  .tabela-grafico th, .tabela-grafico td { border: 1px solid #e0e0e0; padding: 0; height: 32px; background: #fff; }
-  .tabela-grafico thead th { background: #1a73e8; color: #fff; height: 25px; text-align: center; font-size: 11px; }
-
-  /* ===== EFEITOS VISUAIS (HOVER, SELEÇÃO E CONCLUÍDA) ===== */
-  .tabela-fixa tbody tr:hover, .tabela-grafico tbody tr:hover { background: #f5f9ff; }
-  .tabela-fixa tbody tr.selected, .tabela-grafico tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
+  table.gantt { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 12px; }
+  table.gantt th, table.gantt td { border-right: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; padding: 0 6px; height: 32px; white-space: nowrap; background: #fff; }
   
-   /* Fundo verde claro para tarefas CONCLUÍDAS */
-  .tabela-fixa tbody tr.row-done, .tabela-grafico tbody tr.row-done { background-color: #33f76a !important; }
-  .tabela-fixa tbody tr.row-done:hover, .tabela-grafico tbody tr.row-done:hover { background-color: #ceead6 !important; }
+  /* ===== CABEÇALHO DA TABELA ===== */
+  table.gantt thead th {
+    background: #1a73e8; color: #fff; font-weight: 600; text-align: center; font-size: 11px;
+    position: sticky; top: 0; z-index: 20;
+  }
+  /* Ajuste das alturas dos cabeçalhos (Mesmo e Dias) */
+  table.gantt thead tr:nth-child(1) th { height: 25px; }
+  table.gantt thead tr:nth-child(2) th { height: 25px; }
 
-  /* Fundo amarelo claro para tarefas ATRASADAS */
-  .tabela-fixa tbody tr.row-late, .tabela-grafico tbody tr.row-late { background-color: #f4f80b !important; }
-  .tabela-fixa tbody tr.row-late:hover, .tabela-grafico tbody tr.row-late:hover { background-color: #ffe69c !important; }bela-fixa tbody tr.row-done:hover, .tabela-grafico tbody tr.row-done:hover { background-color: #ceead6 !important; }
+    /* ===== CONFIGURAÇÃO DE LARGURA DAS COLUNAS ===== */
+  /* ALTERE OS VALORES ABAIXO PARA MUDAR O TAMANHO */
+  :root {
+    --w-task: 100px;  /* Tamanho da coluna de Tarefa / Serviço */
+    --w-info: 80px;   /* Tamanho das colunas: Início, Entrega, Dur, Prog */
+    --w-act: 20px;   /* Tamanho da coluna de Ações (botões) */
+  }
+
+  /* Aplicação das Larguras */
+ :root {
+  --w-task: 350px; /* Tamanho bom para o nome da tarefa */
+  --w-info: 80px;  /* Tamanho bom para as datas */
+  --w-act: 130px;  /* Tamanho bom para os botões */
+}
+
+  /* Cálculo automático da fixação (Sticky) - NÃO PRECISA MEXER AQUI */
+  .col-task { left: 0px; }
+  .col-info:nth-child(2) { left: var(--w-task); }
+  .col-info:nth-child(3) { left: calc(var(--w-task) + var(--w-info)); }
+  .col-info:nth-child(4) { left: calc(var(--w-task) + (var(--w-info) * 2)); }
+  .col-info:nth-child(5) { left: calc(var(--w-task) + (var(--w-info) * 3)); }
+  .col-act  { left: calc(var(--w-task) + (var(--w-info) * 4)); }
+
+  /* Sombra para dar efeito 3D na coluna fixa */
+  table.gantt tbody td.col-act { border-right: 2px solid #1a73e8; box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1); }
+
+  /* ===== EFEITOS DAS LINHAS (Hover, Verde, Amarelo) ===== */
+  .hover-row:hover td { background: #f5f9ff !important; }
+  .row-done td { background-color: #e6f4ea !important; }
+  .row-done:hover td { background-color: #ceead6 !important; }
+  .row-late td { background-color: #fff3cd !important; }
+  .row-late:hover td { background-color: #ffe69c !important; }
+  .selected-row td { background-color: #fff3cd !important; outline: 2px solid #fbbc04; outline-offset: -2px; }
 
   /* ===== TEXTOS E AÇÕES ===== */
   .task-name { display: flex; align-items: center; gap: 6px; }
   .tarefa-pai { font-weight: 600; color: #1a3d6d; }
   .subtask-name { color: #444; }
   .actions { display: flex; gap: 4px; justify-content: center; }
-  .actions button { padding: 3px 7px; font-size: 11px; background: #e8f0fe; color: #1a73e8; }
+  .actions button { padding: 3px 7px; font-size: 11px; background: #e8f0fe; color: #1a73e8; height: auto; }
   .actions button:hover { background: #d2e3fc; }
   .actions button.del { background: #fce8e6; color: #d93025; font-weight: 600; }
   .actions button.del:hover { background: #f6c7c2; }
@@ -76,23 +99,27 @@
   .badge-late { background: #fce8e6; color: #d93025; }
   .badge-paused { background: #fef7e0; color: #b06000; }
 
-  /* ===== GRÁFICO ===== */
-  .gantt-cell { position: relative; overflow: hidden; }
-  .bar { position: absolute; top: 6px; bottom: 6px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; background: #e8f0fe; border: 1px solid #1a73e8; }
+  /* ===== GRÁFICO E BARRAS ===== */
+  .gantt-cell { position: relative; padding: 0 !important; height: 32px; overflow: hidden; border-right: none; }
+  .day-col { min-width: 26px; width: 26px; border-right: 1px solid #e0e0e0; }
+  .bar { position: absolute; top: 6px; bottom: 6px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: filter .15s; background: #e8f0fe; border: 1px solid #1a73e8; z-index: 2; }
   .bar:hover { filter: brightness(0.95); }
-  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #1a73e8; z-index: 1; }
-  .bar-text { position: relative; z-index: 2; color: #1a3d6d; mix-blend-mode: difference; }
+  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #1a73e8; z-index: -1; }
+  .bar-text { position: relative; z-index: 3; color: #1a3d6d; mix-blend-mode: difference; }
+  
   .bar.subtask { border-color: #34a853; background: #e6f4ea; }
   .bar.subtask .bar-fill { background: #34a853; }
   .bar.done { border-color: #9aa0a6; background: #f1f3f4; }
   .bar.done .bar-fill { background: #9aa0a6; }
   .bar.overdue { border-color: #d93025; background: #fce8e6; }
   .bar.overdue .bar-fill { background: #d93025; }
+  
   .bar.paused { border: 2px dashed #d93025; background: repeating-linear-gradient(45deg, #fce8e6, #fce8e6 5px, #fff 5px, #fff 10px); }
   .bar.paused .bar-fill { background: repeating-linear-gradient(45deg, #d93025, #d93025 5px, #fce8e6 5px, #fce8e6 10px); }
+  
   .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #ea4335; z-index: 4; pointer-events: none; }
 
-  /* ===== MODAIS ===== */
+  /* ===== MODAIS E LEGENDA ===== */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 100; }
   .modal-overlay.active { display: flex; }
   .modal { background: #fff; border-radius: 8px; padding: 20px; width: 500px; max-width: 95vw; max-height: 90vh; overflow: auto; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
@@ -105,7 +132,6 @@
   .modal .msg.show { display: block; }
   .modal .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-  /* ===== LEGENDA E BACKUP ===== */
   .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; margin-top: 10px; color: #555; }
   .legend span { display: flex; align-items: center; gap: 5px; }
   .legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
@@ -115,7 +141,7 @@
 </head>
 <body>
 
-<div id="loadingOverlay"><div class="spinner"></div>Carregando dados do servidor...</div>
+<div id="loadingOverlay"><div class="spinner"></div>Carregando dados...</div>
 
 <div class="header">
   <img src="logo.png" alt="Gold" onerror="this.style.display='none';">
@@ -130,39 +156,22 @@
 </div>
 
 <div class="backup-panel no-print">
-  <strong>☁️ Sincronização na Nuvem (Supabase) ativada</strong>
-  <button class="success" onclick="exportBackup()">📤 Baixar Cópia (Backup)</button>
+  <strong>☁️ Sincronização na Nuvem (Supabase)</strong>
+  <button class="success" onclick="exportBackup()">📤 Baixar Cópia</button>
   <span id="backupInfo" style="color:#888;margin-left:auto;">Conectando...</span>
 </div>
 
 <div class="backup-panel no-print" style="margin-bottom: 10px;">
   <strong>🔍 Filtrar:</strong>
-  <input type="text" id="filtroBusca" onkeyup="filtrarTabela()" placeholder="Digite o nome da tarefa ou responsável..." style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 300px; font-size: 13px;">
-  <span style="color: #888; font-size: 12px; margin-left: 10px;">(Limpe o campo para ver todas)</span>
+  <input type="text" id="filtroBusca" onkeyup="filtrarTabela()" placeholder="Nome da tarefa ou responsável..." style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 300px; font-size: 13px;">
 </div>
 
-<div class="gantt-layout">
-  <div class="tabela-fixa">
-    <table>
-      <thead>
-        <tr>
-          <th class="col-task">Tarefa / Serviço</th>
-          <th class="col-info">Início</th>
-          <th class="col-info">Entrega</th>
-          <th class="col-info">Dur.</th>
-          <th class="col-info">Prog.</th>
-          <th class="col-act no-print">Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tbodyFixed"></tbody>
-    </table>
-  </div>
-  <div class="tabela-grafico">
-    <table>
-      <thead id="theadScroll"></thead>
-      <tbody id="tbodyScroll"></tbody>
-    </table>
-  </div>
+<!-- AQUI COMEÇA A TABELA ÚNICA COM ROLAGEM -->
+<div class="gantt-container">
+  <table class="gantt" id="ganttTable">
+    <thead id="ganttHead"></thead>
+    <tbody id="ganttBody"></tbody>
+  </table>
 </div>
 
 <div class="legend no-print">
@@ -174,7 +183,7 @@
   <span><i style="background:#ea4335;width:3px"></i> Hoje</span>
 </div>
 
-<!-- MODAL TAREFA -->
+<!-- MODAIS -->
 <div class="modal-overlay" id="taskModal">
   <div class="modal">
     <h2 id="taskModalTitle">Nova Tarefa</h2>
@@ -200,7 +209,6 @@
   </div>
 </div>
 
-<!-- MODAL JUSTIFICATIVA -->
 <div class="modal-overlay" id="justifyModal">
   <div class="modal">
     <h2>⚠️ Alteração de Prazo</h2>
@@ -209,35 +217,30 @@
     <div class="msg" id="justifyMsg"></div>
     <div class="footer">
       <button class="secondary" onclick="cancelJustify()">Cancelar</button>
-      <button class="danger" onclick="confirmJustify()">Confirmar Alteração</button>
+      <button class="danger" onclick="confirmJustify()">Confirmar</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL HISTÓRICO -->
 <div class="modal-overlay" id="historicoModal">
   <div class="modal">
-    <h2>📋 Histórico de Alterações de Prazo</h2>
+    <h2>📋 Histórico de Prazos</h2>
     <div id="historicoConteudo" style="font-size: 13px; margin-top: 15px;"></div>
     <div class="footer">
       <button class="secondary" onclick="document.getElementById('historicoModal').classList.remove('active')">Fechar</button>
     </div>
   </div>
 </div>
-<script>
 
- /* ===== BLOCO 02 ===== */
- 
-/* ===== CONEXÃO COM SUPABASE ===== */
+
+<script>
 const SUPABASE_URL = 'https://wqtzhhiocmdxiipcsbdb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndxdHpoaGlvY21keGlpcGNzYmRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDk3MDUsImV4cCI6MjEwODc4NTcwNX0.s2g9KplJwoxDqlB4eSCIIPN8TK09IEzb1-dgHL9_pXI';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* ===== VARIÁVEIS GLOBAIS ===== */
 let data = [], expanded = {}, dayWidth = 26, pendingEdit = null, selectedTaskId = null, termoFiltro = "";
 function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2,7); }
 
-/* ===== CARREGAR DADOS ===== */
 async function load() {
   try {
     const { data: tarefas, error } = await _supabase.from('tarefas').select('*').order('start_date', { ascending: true });
@@ -247,12 +250,11 @@ async function load() {
       start: t.start_date, end: t.end_date, status: t.status, notes: t.notes, justificativas: t.justificativas || []
     }));
   } catch(e) { data = []; }
-  document.getElementById('backupInfo').textContent = `${data.length} tarefa(s) sincronizada(s) na nuvem`;
+  document.getElementById('backupInfo').textContent = `${data.length} tarefa(s) sincronizada(s)`;
   document.getElementById('loadingOverlay').style.display = 'none';
   render();
 }
 
-/* ===== FUNÇÕES DE DATA E TEXTO ===== */
 function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
 function fmtDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function addDays(d,n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
@@ -261,7 +263,6 @@ function todayStr(){ return fmtDate(new Date()); }
 function formatBR(iso) { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
 function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-/* ===== HIERARQUIA E PROGRESSO ===== */
 function getChildren(id) { return data.filter(t => t.parentId === id); }
 function getRoots() { return data.filter(t => !t.parentId); }
 function getSubtree(id) { const out = [data.find(t => t.id === id)]; getChildren(id).forEach(c => out.push(...getSubtree(c.id))); return out; }
@@ -276,13 +277,7 @@ function calcularProgresso(t) {
   return Math.min(100, Math.max(0, Math.round((daysBetween(inicio, hoje) + 1) / (daysBetween(inicio, fim) + 1) * 100)));
 }
 
-/* ===== FILTRO ===== */
-function filtrarTabela() {
-  termoFiltro = document.getElementById('filtroBusca').value.toLowerCase();
-  render();
-}
-
-/* ===== FUNÇÃO DE RENDERIZAÇÃO ===== */
+function filtrarTabela() { termoFiltro = document.getElementById('filtroBusca').value.toLowerCase(); render(); }
 function render() { renderHead(); renderBody(); }
 
 function renderHead() {
@@ -303,6 +298,15 @@ function renderHead() {
   const monthRow = [], dayRow = [];
   let lastMonth = null, mStart = 0, monthGroups = [];
   
+  // Colunas Fixas (Esquerda)
+  monthRow.push(`<th class="col-task sticky-col" rowspan="2">Tarefa / Serviço</th>`);
+  monthRow.push(`<th class="col-info sticky-col" rowspan="2">Início</th>`);
+  monthRow.push(`<th class="col-info sticky-col" rowspan="2">Entrega</th>`);
+  monthRow.push(`<th class="col-info sticky-col" rowspan="2">Dur.</th>`);
+  monthRow.push(`<th class="col-info sticky-col" rowspan="2">Prog.</th>`);
+  monthRow.push(`<th class="col-act sticky-col no-print" rowspan="2">Ações</th>`);
+  
+  // Colunas do Gráfico (Direita)
   for (let i = 0; i < totalDays; i++) {
     const d = addDays(min, i), key = d.getFullYear() + '-' + d.getMonth();
     if (key !== lastMonth) {
@@ -316,18 +320,15 @@ function renderHead() {
   for (let i = 0; i < totalDays; i++) {
     const d = addDays(min, i), isWeekend = d.getDay() === 0 || d.getDay() === 6;
     const style = `min-width:${dayWidth}px;width:${dayWidth}px;` + (isWeekend ? 'background:#eef1f6;' : '');
-    dayRow.push(`<th style="${style}">${d.getDate()}<br><span style="font-size:8px;">${['D','S','T','Q','Q','S','S'][d.getDay()]}</span></th>`);
+    dayRow.push(`<th class="day-col" style="${style}">${d.getDate()}<br><span style="font-size:8px;">${['D','S','T','Q','Q','S','S'][d.getDay()]}</span></th>`);
   }
-  document.getElementById('theadScroll').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
+  document.getElementById('ganttHead').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
 }
 function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()]} / ${d.getFullYear()}`; }
- 
-
- /* ===== BLOCO 3 (JavaScript - Tabela e Ações) ===== */
 
 function renderBody() {
-  const tbodyFixed = document.getElementById('tbodyFixed'), tbodyScroll = document.getElementById('tbodyScroll');
-  const rowsFixed = [], rowsScroll = [];
+  const tbody = document.getElementById('ganttBody');
+  const rows = [];
   const { min, totalDays } = window.__range;
   
   function renderRow(t, level) {
@@ -336,37 +337,34 @@ function renderBody() {
     const passaFiltro = termoFiltro === "" || textoBusca.includes(termoFiltro);
 
     const offset = daysBetween(min, parseDate(t.start)), span = daysBetween(parseDate(t.start), parseDate(t.end)) + 1;
-    
-    // REGRA DE COR VERDE: A linha só fica verde se o status manual for 'concluida'
     const pct = calcularProgresso(t), concluida = t.status === 'concluida';
-    
-    // REGRA DE COR AMARELA: Fica amarela se estiver atrasada e NÃO estiver concluída
     const atrasada = !concluida && parseDate(t.end) < new Date(new Date().toDateString()), pausada = t.status === 'pausada';
     
     let barClass = 'bar ' + (level > 0 ? 'subtask ' : '') + (concluida ? 'done ' : '') + (atrasada ? 'overdue ' : '') + (pausada ? 'paused ' : '');
-    const isSelected = selectedTaskId === t.id ? 'selected' : '';
+    const isSelected = selectedTaskId === t.id ? 'selected-row' : '';
 
-    // Define qual classe de fundo será aplicada (verde se concluída, amarelo se atrasada, nenhuma se normal)
-    let rowClass = '';
+    let rowClass = 'hover-row';
     if (concluida) rowClass = 'row-done';
     else if (atrasada) rowClass = 'row-late';
 
-    // Cria a linha da esquerda (Texto)
-    const trF = document.createElement('tr'); 
-    trF.className = `row-tarefa ${isSelected} ${rowClass}`; 
-    trF.dataset.id = t.id;
-    
-    trF.innerHTML = `
-      <td class="col-task"><div class="task-name" style="padding-left:${level * 20}px;">
+    const tr = document.createElement('tr');
+    tr.className = `${rowClass} ${isSelected}`;
+    tr.dataset.id = t.id;
+
+    // Colunas Fixas
+    let html = `
+      <td class="col-task sticky-col"><div class="task-name" style="padding-left:${level * 20}px;">
         ${hasChildren ? `<span style="cursor:pointer;" onclick="event.stopPropagation();toggleExpand('${t.id}')">${isExpanded ? '▼' : '▶'}</span>` : '<span style="width:14px;display:inline-block;"></span>'}
         <span class="${level === 0 ? 'tarefa-pai' : 'subtask-name'}">${escapeHtml(t.name)}</span>
         ${level === 0 ? '<span class="badge badge-pai">TAREFA</span>' : '<span class="badge badge-sub">SUB</span>'}
         ${atrasada ? '<span class="badge badge-late">ATRASADA</span>' : ''}${pausada ? '<span class="badge badge-paused">PAUSADA</span>' : ''}
         ${t.owner ? `<span style="color:#888;font-size:11px;">👤 ${escapeHtml(t.owner)}</span>` : ''}
       </div></td>
-      <td class="col-info">${formatBR(t.start)}</td><td class="col-info">${formatBR(t.end)}</td>
-      <td class="col-info">${span}d</td><td class="col-info">${pct}%</td>
-      <td class="col-act no-print"><div class="actions">
+      <td class="col-info sticky-col">${formatBR(t.start)}</td>
+      <td class="col-info sticky-col">${formatBR(t.end)}</td>
+      <td class="col-info sticky-col">${span}d</td>
+      <td class="col-info sticky-col">${pct}%</td>
+      <td class="col-act sticky-col no-print"><div class="actions">
         ${!concluida ? `<button class="pause" onclick="event.stopPropagation();togglePause('${t.id}')">${pausada ? '▶️' : '⏸️'}</button>` : ''}
         ${t.justificativas && t.justificativas.length > 0 ? `<button class="hist" onclick="event.stopPropagation();verHistorico('${t.id}')">📋</button>` : ''}
         <button onclick="event.stopPropagation();editTask('${t.id}')">✎</button>
@@ -374,32 +372,36 @@ function renderBody() {
         <button class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️</button>
       </div></td>`;
 
-    // Cria a linha da direita (Gráfico)
-    const trS = document.createElement('tr'); 
-    trS.className = `row-tarefa ${isSelected} ${rowClass}`; 
-    trS.dataset.id = t.id;
+    // Coluna do Gráfico
+    html += `<td class="gantt-cell" colspan="${totalDays}">`;
     
-    const tdG = document.createElement('td'); tdG.colSpan = totalDays; tdG.className = 'gantt-cell';
-    tdG.innerHTML = `<div class="${barClass}" style="left:${offset * dayWidth}px;width:${span * dayWidth}px;" onclick="editTask('${t.id}')">
-      <div class="bar-fill" style="width:${pct}%"></div><span class="bar-text">${span >= 3 && pct > 0 ? pct + '%' : ''}</span>
+    let innerBarHtml = '';
+    if (pausada) {
+      innerBarHtml = `<div class="bar-fill" style="width:${pct}%; background: repeating-linear-gradient(45deg, #d93025, #d93025 5px, #fce8e6 5px, #fce8e6 10px);"></div><span class="bar-text">${span >= 3 && pct > 0 ? pct + '%' : ''}</span>`;
+    } else {
+      innerBarHtml = `<div class="bar-fill" style="width:${pct}%"></div><span class="bar-text">${span >= 3 && pct > 0 ? pct + '%' : ''}</span>`;
+    }
+    
+    html += `<div class="${barClass}" style="left:${offset * dayWidth}px;width:${span * dayWidth}px;" onclick="editTask('${t.id}')">
+      ${innerBarHtml}
     </div>`;
-    
+
     const hoje = new Date(new Date().toDateString());
     if (hoje >= min && hoje <= addDays(min, totalDays-1)) {
-      tdG.innerHTML += `<div class="today-line" style="left:${daysBetween(min, hoje) * dayWidth + dayWidth/2}px"></div>`;
+      html += `<div class="today-line" style="left:${daysBetween(min, hoje) * dayWidth + dayWidth/2}px"></div>`;
     }
-    trS.appendChild(tdG);
+    html += `</td>`;
 
-    if (passaFiltro) { rowsFixed.push(trF); rowsScroll.push(trS); }
+    tr.innerHTML = html;
+    if (passaFiltro) rows.push(tr);
     if (hasChildren && isExpanded) getChildren(t.id).forEach(c => renderRow(c, level + 1));
   }
   
   getRoots().forEach(r => renderRow(r, 0));
-  tbodyFixed.innerHTML = ''; tbodyScroll.innerHTML = '';
-  rowsFixed.forEach(r => tbodyFixed.appendChild(r)); rowsScroll.forEach(r => tbodyScroll.appendChild(r));
+  tbody.innerHTML = '';
+  rows.forEach(r => tbody.appendChild(r));
 }
 
-/* ===== CONTROLES ===== */
 function toggleExpand(id) { expanded[id] = expanded[id] === false ? true : false; render(); }
 function expandAll(v) { data.forEach(t => expanded[t.id] = v); render(); }
 
@@ -452,7 +454,7 @@ async function applyTask(p) {
     await _supabase.from('tarefas').upsert(payload);
     if (p.id) Object.assign(data.find(x => x.id === p.id), p);
     else { data.push({ id: payload.id, parentId: p.parentId, name: p.name, owner: p.owner, start: p.start, end: p.end, status: p.status, notes: p.notes, justificativas: [] }); if (p.parentId) expanded[p.parentId] = true; }
-    closeTaskModal(); render(); document.getElementById('backupInfo').textContent = `${data.length} tarefa(s) sincronizada(s) na nuvem`;
+    closeTaskModal(); render(); document.getElementById('backupInfo').textContent = `${data.length} tarefa(s) sincronizada(s)`;
   } catch(e) { alert('Erro ao salvar no banco de dados.'); }
 }
 
@@ -480,7 +482,7 @@ function verHistorico(id) {
     logs.slice().reverse().forEach(log => {
       const dt = new Date(log.data).toLocaleString('pt-BR');
       html += `<li style="margin-bottom: 10px; border-left: 3px solid #fbbc04; padding: 10px; background: #fdfaf0; border-radius: 4px;">
-        <strong>Data da Alteração:</strong> ${dt} <br>
+        <strong>Data:</strong> ${dt} <br>
         <strong>De:</strong> ${formatBR(log.de.inicio)} até ${formatBR(log.de.entrega)} <br>
         <strong>Para:</strong> ${formatBR(log.para.inicio)} até ${formatBR(log.para.entrega)} <br>
         <strong>Motivo:</strong> <i>"${log.motivo}"</i>
@@ -508,11 +510,11 @@ async function deleteTask(id) {
 document.addEventListener('click', e => {
   const tr = e.target.closest('tr[data-id]');
   if (tr) {
-    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
-    document.querySelectorAll(`tr[data-id="${tr.dataset.id}"]`).forEach(r => r.classList.add('selected'));
+    document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
+    tr.classList.add('selected-row');
     selectedTaskId = tr.dataset.id;
   } else if (!e.target.closest('.modal-overlay') && !e.target.closest('button')) {
-    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected')); selectedTaskId = null;
+    document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row')); selectedTaskId = null;
   }
 });
 document.addEventListener('keydown', e => {
