@@ -10,7 +10,7 @@
   /* ===== RESET E FUNDO ===== */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #222; padding: 20px; background-color: #f0f2f5; position: relative; min-height: 100vh; }
-  body::before { content: ""; position: fixed; inset: 0; background-image: url('fundo.png'); background-size: cover; background-position: center; opacity: 0.08; z-index: -1; pointer-events: none; }
+  body::before { content: ""; position: fixed; inset: 0; background-image: url('fundo.jpg'); background-size: cover; background-position: center; opacity: 0.08; z-index: -1; pointer-events: none; }
   
   /* ===== TELA DE CARREGAMENTO ===== */
   #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-size: 18px; color: #1a73e8; font-weight: bold; }
@@ -108,7 +108,7 @@
 <div id="loadingOverlay"><div class="spinner"></div>Carregando dados do servidor...</div>
 
 <div class="header">
-  <img src="logo-gold.png" alt="Gold" onerror="this.style.display='none';">
+  <img src="logo.png" alt="Gold" onerror="this.style.display='none';">
   <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
 </div>
 
