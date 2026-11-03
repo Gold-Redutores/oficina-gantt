@@ -1,16 +1,17 @@
+ /* ===== BLOCO 1 (O CSS)===== */
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gantt - Controle de Serviços - Gold</title>
-<!-- Biblioteca do Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* ===== RESET E FUNDO ===== */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #222; padding: 20px; background-color: #f0f2f5; position: relative; min-height: 100vh; }
-  body::before { content: ""; position: fixed; inset: 0; background-image: url('fundo.jpg'); background-size: cover; background-position: center; opacity: 0.08; z-index: -1; pointer-events: none; }
+  body::before { content: ""; position: fixed; inset: 0; background-image: url('fundo.png'); background-size: cover; background-position: center; opacity: 0.08; z-index: -1; pointer-events: none; }
   
   /* ===== TELA DE CARREGAMENTO ===== */
   #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-size: 18px; color: #1a73e8; font-weight: bold; }
@@ -43,8 +44,13 @@
   .tabela-grafico th, .tabela-grafico td { border: 1px solid #e0e0e0; padding: 0; height: 32px; background: #fff; }
   .tabela-grafico thead th { background: #1a73e8; color: #fff; height: 25px; text-align: center; font-size: 11px; }
 
+  /* ===== EFEITOS VISUAIS (HOVER, SELEÇÃO E CONCLUÍDA) ===== */
   .tabela-fixa tbody tr:hover, .tabela-grafico tbody tr:hover { background: #f5f9ff; }
   .tabela-fixa tbody tr.selected, .tabela-grafico tbody tr.selected { background: #fff3cd !important; outline: 2px solid #fbbc04; }
+  
+  /* Fundo verde claro para tarefas concluídas */
+  .tabela-fixa tbody tr.row-done, .tabela-grafico tbody tr.row-done { background-color: #e6f4ea !important; }
+  .tabela-fixa tbody tr.row-done:hover, .tabela-grafico tbody tr.row-done:hover { background-color: #ceead6 !important; }
 
   /* ===== TEXTOS E AÇÕES ===== */
   .task-name { display: flex; align-items: center; gap: 6px; }
@@ -108,7 +114,7 @@
 <div id="loadingOverlay"><div class="spinner"></div>Carregando dados do servidor...</div>
 
 <div class="header">
-  <img src="logo.png" alt="Gold" onerror="this.style.display='none';">
+  <img src="logo-gold.png" alt="Gold" onerror="this.style.display='none';">
   <h1>🛠️ Gantt — Controle de Serviços Pendentes</h1>
 </div>
 
@@ -308,6 +314,10 @@ function renderHead() {
   document.getElementById('theadScroll').innerHTML = `<tr>${monthRow.join('')}</tr><tr>${dayRow.join('')}</tr>`;
 }
 function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()]} / ${d.getFullYear()}`; }
+ 
+  /* ===== BLOCO 3 (JavaScript) ===== */
+
+  
   function renderBody() {
   const tbodyFixed = document.getElementById('tbodyFixed'), tbodyScroll = document.getElementById('tbodyScroll');
   const rowsFixed = [], rowsScroll = [];
@@ -324,7 +334,8 @@ function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio
     let barClass = 'bar ' + (level > 0 ? 'subtask ' : '') + (concluida ? 'done ' : '') + (atrasada ? 'overdue ' : '') + (pausada ? 'paused ' : '');
     const isSelected = selectedTaskId === t.id ? 'selected' : '';
 
-    const trF = document.createElement('tr'); trF.className = `row-tarefa ${isSelected}`; trF.dataset.id = t.id;
+    // AQUI ESTÁ A MUDANÇA: Adicionado ${concluida ? 'row-done' : ''}
+    const trF = document.createElement('tr'); trF.className = `row-tarefa ${isSelected} ${concluida ? 'row-done' : ''}`; trF.dataset.id = t.id;
     trF.innerHTML = `
       <td class="col-task"><div class="task-name" style="padding-left:${level * 20}px;">
         ${hasChildren ? `<span style="cursor:pointer;" onclick="event.stopPropagation();toggleExpand('${t.id}')">${isExpanded ? '▼' : '▶'}</span>` : '<span style="width:14px;display:inline-block;"></span>'}
@@ -343,7 +354,8 @@ function monthLabel(d) { return `${['Janeiro','Fevereiro','Março','Abril','Maio
         <button class="del" onclick="event.stopPropagation();deleteTask('${t.id}')">🗑️</button>
       </div></td>`;
 
-    const trS = document.createElement('tr'); trS.className = `row-tarefa ${isSelected}`; trS.dataset.id = t.id;
+    // AQUI TAMBÉM: Adicionado ${concluida ? 'row-done' : ''}
+    const trS = document.createElement('tr'); trS.className = `row-tarefa ${isSelected} ${concluida ? 'row-done' : ''}`; trS.dataset.id = t.id;
     const tdG = document.createElement('td'); tdG.colSpan = totalDays; tdG.className = 'gantt-cell';
     tdG.innerHTML = `<div class="${barClass}" style="left:${offset * dayWidth}px;width:${span * dayWidth}px;" onclick="editTask('${t.id}')">
       <div class="bar-fill" style="width:${pct}%"></div><span class="bar-text">${span >= 3 && pct > 0 ? pct + '%' : ''}</span>
@@ -489,3 +501,4 @@ load();
 </script>
 </body>
 </html>
+  
